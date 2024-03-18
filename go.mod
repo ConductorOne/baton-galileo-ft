@@ -3,7 +3,7 @@ module github.com/conductorone/baton-galileo-ft
 go 1.22.0
 
 require (
-	github.com/conductorone/baton-sdk v0.1.27
+	github.com/conductorone/baton-sdk v0.1.28
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	go.uber.org/zap v1.27.0
 )
