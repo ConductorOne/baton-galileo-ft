@@ -39,6 +39,7 @@ type TLS struct {
 	errnop      uintptr
 	allocaStack [][]uintptr
 	allocas     []uintptr
+	jumpBuffers []uintptr
 	pthreadData
 	stack stackHeader
 
@@ -82,6 +83,29 @@ func (t *TLS) FreeAlloca() func() {
 		t.allocas = t.allocaStack[n-1]
 		t.allocaStack = t.allocaStack[:n-1]
 	}
+}
+
+func (tls *TLS) PushJumpBuffer(jb uintptr) {
+	tls.jumpBuffers = append(tls.jumpBuffers, jb)
+}
+
+type LongjmpRetval int32
+
+func (tls *TLS) PopJumpBuffer(jb uintptr) {
+	n := len(tls.jumpBuffers)
+	if n == 0 || tls.jumpBuffers[n-1] != jb {
+		panic(todo("unsupported setjmp/longjmp usage"))
+	}
+
+	tls.jumpBuffers = tls.jumpBuffers[:n-1]
+}
+
+func (tls *TLS) Longjmp(jb uintptr, val int32) {
+	tls.PopJumpBuffer(jb)
+	if val == 0 {
+		val = 1
+	}
+	panic(LongjmpRetval(val))
 }
 
 func Xalloca(tls *TLS, size size_t) uintptr {
