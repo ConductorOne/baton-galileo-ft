@@ -38,7 +38,10 @@ func groupResource(group *galileo.Group) (*v2.Resource, error) {
 		"contact-name":  group.ContactName,
 	}
 
-	var options []rs.ResourceOption
+	options := []rs.ResourceOption{
+		rs.WithAnnotation(&v2.ChildResourceType{ResourceTypeId: userResourceType.Id}),
+	}
+
 	if group.ParentGroupID != "" {
 		parentID, err := rs.NewResourceID(groupResourceType, group.ParentGroupID)
 		if err != nil {
@@ -145,20 +148,18 @@ func (g *groupBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ 
 func (g *groupBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
 	var rv []*v2.Grant
 
-	groups, err := g.client.ListGroupMembers(ctx, resource.Id.Resource)
+	group, err := g.client.ListGroupMembers(ctx, resource.Id.Resource)
 	if err != nil {
 		return nil, "", nil, fmt.Errorf("galileo-ft-connector: failed to list group members: %w", err)
 	}
 
-	for _, gr := range groups {
-		for _, accID := range gr.AccountIDs {
-			accID, err := rs.NewResourceID(userResourceType, accID)
-			if err != nil {
-				return nil, "", nil, fmt.Errorf("galileo-ft-connector: failed to create user resource ID: %w", err)
-			}
-
-			rv = append(rv, grant.NewGrant(resource, GroupMembership, accID))
+	for _, accID := range group.AccountIDs {
+		accID, err := rs.NewResourceID(userResourceType, accID)
+		if err != nil {
+			return nil, "", nil, fmt.Errorf("galileo-ft-connector: failed to create user resource ID: %w", err)
 		}
+
+		rv = append(rv, grant.NewGrant(resource, GroupMembership, accID))
 	}
 
 	return rv, "", nil, nil

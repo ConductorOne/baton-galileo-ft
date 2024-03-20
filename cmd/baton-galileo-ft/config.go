@@ -26,10 +26,6 @@ func validateConfig(ctx context.Context, cfg *config) error {
 		return status.Error(codes.InvalidArgument, "provider-id must be provided, use --help for more information")
 	}
 
-	if cfg.PrimaryAccount == "" {
-		return status.Error(codes.InvalidArgument, "primary-account must be provided, use --help for more information")
-	}
-
 	return nil
 }
 
@@ -37,6 +33,5 @@ func cmdFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().String("api-login", "", "The username provided by Galileo-FT for API access. ($BATON_API_LOGIN)")
 	cmd.PersistentFlags().String("api-trans-key", "", "The password provided by Galileo-FT, used alongside the api-login. ($BATON_API_TRANS_KEY)")
 	cmd.PersistentFlags().String("provider-id", "", "A unique identifier from Galileo-FT representing your organization, used for tracking transactions and data. ($BATON_PROVIDER_ID)")
-	cmd.PersistentFlags().String("primary-account", "", "The primary account number for the top-level account, this can be the PRN or PAN of the account. ($BATON_PRIMARY_ACCOUNT)")
 	cmd.PersistentFlags().String("hostname", "", "URL hostname for production hostname. ($BATON_HOSTNAME)")
 }

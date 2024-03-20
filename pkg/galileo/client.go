@@ -14,20 +14,23 @@ import (
 const (
 	BaseHost = "api-sandbox.cv.gpsrv.com"
 
-	RelatedAccountsEndpoint  = "/intserv/4.0/getRelatedAccounts"
-	AccountOverviewEndpoint  = "/intserv/4.0/getAccountOverview"
-	RootGroupsEndpoint       = "/intserv/4.0/getRootGroups"
-	GroupHierarchyEndpoint   = "/intserv/4.0/getGroupHierarchy"
-	GroupInfoEndpoint        = "/intserv/4.0/getGroupsInfo"
-	GroupsToAccountsEndpoint = "/intserv/4.0/getAccountGroupRelationships"
+	RelatedAccountsEndpoint        = "/intserv/4.0/getRelatedAccounts"
+	AccountOverviewEndpoint        = "/intserv/4.0/getAccountOverview"
+	RootGroupsEndpoint             = "/intserv/4.0/getRootGroups"
+	GroupHierarchyEndpoint         = "/intserv/4.0/getGroupHierarchy"
+	GroupInfoEndpoint              = "/intserv/4.0/getGroupsInfo"
+	GroupsToAccountsEndpoint       = "/intserv/4.0/getAccountGroupRelationships"
+	AddAccountToGroupEndpoint      = "/intserv/4.0/setAccountGroupRelationships"
+	RemoveAccountFromGroupEndpoint = "/intserv/4.0/removeAccountGroupRelationship"
+
+	PingEndpoint = "/intserv/4.0/ping"
 )
 
 type Config struct {
-	Hostname       string `mapstructure:"hostname"`
-	APILogin       string `mapstructure:"api-login"`
-	APITransKey    string `mapstructure:"api-trans-key"`
-	ProviderID     string `mapstructure:"provider-id"`
-	PrimaryAccount string `mapstructure:"primary-account"`
+	Hostname    string `mapstructure:"hostname"`
+	APILogin    string `mapstructure:"api-login"`
+	APITransKey string `mapstructure:"api-trans-key"`
+	ProviderID  string `mapstructure:"provider-id"`
 }
 
 type Client struct {
@@ -54,18 +57,30 @@ func NewClient(httpClient *http.Client, config *Config) *Client {
 	}
 }
 
-func (c *Client) GetPrimaryAccountNumber() string {
-	return c.config.PrimaryAccount
+func (c *Client) Ping(ctx context.Context) error {
+	data := &FormData{
+		APILogin:    c.config.APILogin,
+		APITransKey: c.config.APITransKey,
+		ProviderID:  c.config.ProviderID,
+	}
+
+	err := c.post(ctx, PingEndpoint, prepareForm(data), nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func (c *Client) ListRelatedAccounts(ctx context.Context) ([]Account, error) {
+// https://docs.galileo-ft.com/pro/reference/post_getrelatedaccounts
+func (c *Client) ListRelatedAccounts(ctx context.Context, accountID string) ([]Account, error) {
 	var accounts BaseResponse[RelatedAccountsResponse]
 
 	data := &FormData{
 		APILogin:    c.config.APILogin,
 		APITransKey: c.config.APITransKey,
 		ProviderID:  c.config.ProviderID,
-		AccountNo:   c.config.PrimaryAccount,
+		AccountNo:   accountID,
 	}
 
 	err := c.post(ctx, RelatedAccountsEndpoint, prepareForm(data), &accounts)
@@ -80,6 +95,7 @@ type AccountOverviewResponse struct {
 	Profile *Customer `json:"profile"`
 }
 
+// https://docs.galileo-ft.com/pro/reference/post_getaccountoverview
 func (c *Client) GetCustomer(ctx context.Context, accountID string) (*Customer, error) {
 	var res BaseResponse[AccountOverviewResponse]
 
@@ -98,6 +114,7 @@ func (c *Client) GetCustomer(ctx context.Context, accountID string) (*Customer, 
 	return res.Data.Profile, nil
 }
 
+// https://docs.galileo-ft.com/pro/reference/post_getrootgroups
 func (c *Client) ListRootGroups(ctx context.Context, pgVars *PaginationVars) ([]Group, uint, error) {
 	var res ListReponse[Group]
 
@@ -132,6 +149,7 @@ func mapGroupIDs(groups []GroupHierarchy) []string {
 	return ids
 }
 
+// https://docs.galileo-ft.com/pro/reference/post_getgrouphierarchy
 func (c *Client) ListChildrenGroups(ctx context.Context, parentGroupID string) ([]string, error) {
 	var res BaseResponse[[]GroupHierarchy]
 
@@ -153,6 +171,7 @@ func (c *Client) ListChildrenGroups(ctx context.Context, parentGroupID string) (
 	return ids, nil
 }
 
+// https://docs.galileo-ft.com/pro/reference/post_getgroupsinfo
 func (c *Client) GetGroupsInfo(ctx context.Context, groupIDs []string) ([]Group, error) {
 	var res BaseResponse[[]Group]
 
@@ -171,7 +190,8 @@ func (c *Client) GetGroupsInfo(ctx context.Context, groupIDs []string) ([]Group,
 	return res.Data, nil
 }
 
-func (c *Client) ListGroupMembers(ctx context.Context, groupID string) ([]GroupToAccounts, error) {
+// https://docs.galileo-ft.com/pro/reference/post_getaccountgrouprelationships
+func (c *Client) ListGroupMembers(ctx context.Context, groupID string) (*GroupToAccounts, error) {
 	var res BaseResponse[[]GroupToAccounts]
 
 	data := &FormData{
@@ -186,9 +206,14 @@ func (c *Client) ListGroupMembers(ctx context.Context, groupID string) ([]GroupT
 		return nil, err
 	}
 
-	return res.Data, nil
+	if len(res.Data) > 1 {
+		return nil, fmt.Errorf("unexpected number of group to accounts responses: %d", len(res.Data))
+	}
+
+	return &res.Data[0], nil
 }
 
+// https://docs.galileo-ft.com/pro/reference/post_setaccountgrouprelationships
 func (c *Client) AddAccountToGroup(ctx context.Context, groupID, accountID string) error {
 	data := &FormData{
 		APILogin:    c.config.APILogin,
@@ -198,7 +223,7 @@ func (c *Client) AddAccountToGroup(ctx context.Context, groupID, accountID strin
 		AccountIDs:  []string{accountID},
 	}
 
-	err := c.post(ctx, GroupsToAccountsEndpoint, prepareForm(data), nil)
+	err := c.post(ctx, AddAccountToGroupEndpoint, prepareForm(data), nil)
 	if err != nil {
 		return err
 	}
@@ -206,6 +231,7 @@ func (c *Client) AddAccountToGroup(ctx context.Context, groupID, accountID strin
 	return nil
 }
 
+// https://docs.galileo-ft.com/pro/reference/post_removeaccountgrouprelationship
 func (c *Client) RemoveAccountFromGroup(ctx context.Context, groupID, accountID string) error {
 	data := &FormData{
 		APILogin:    c.config.APILogin,
@@ -214,7 +240,7 @@ func (c *Client) RemoveAccountFromGroup(ctx context.Context, groupID, accountID 
 		AccountIDs:  []string{accountID},
 	}
 
-	err := c.post(ctx, GroupsToAccountsEndpoint, prepareForm(data), nil)
+	err := c.post(ctx, RemoveAccountFromGroupEndpoint, prepareForm(data), nil)
 	if err != nil {
 		return err
 	}
@@ -281,8 +307,8 @@ func WithErrorResponse() uhttp.DoOption {
 			return fmt.Errorf("%w - %v", err, string(resp.Body))
 		}
 
-		response := &ErrorResponse{}
-		if err := json.Unmarshal(resp.Body, response); err != nil {
+		var response ErrorResponse
+		if err := json.Unmarshal(resp.Body, &response); err != nil {
 			return fmt.Errorf("failed to unmarshal response: %w", err)
 		}
 

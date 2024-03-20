@@ -42,9 +42,9 @@ func (g *Galileo) Metadata(ctx context.Context) (*v2.ConnectorMetadata, error) {
 // Validate is called to ensure that the connector is properly configured. It should exercise any API credentials
 // to be sure that they are valid.
 func (g *Galileo) Validate(ctx context.Context) (annotations.Annotations, error) {
-	_, err := g.client.GetCustomer(ctx, g.client.GetPrimaryAccountNumber())
+	err := g.client.Ping(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Unauthenticated, "calendly-connector: failed to validate credentials: %v", err)
+		return nil, status.Error(codes.Unauthenticated, "calendly-connector: failed to validate credentials")
 	}
 
 	return nil, nil

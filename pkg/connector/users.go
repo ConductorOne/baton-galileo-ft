@@ -20,7 +20,7 @@ func (u *userBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
 	return userResourceType
 }
 
-func userResource(accID string, user *galileo.Customer) (*v2.Resource, error) {
+func userResource(accID string, user *galileo.Customer, parentResource *v2.ResourceId) (*v2.Resource, error) {
 	userProfile := map[string]interface{}{
 		"first_name":   user.FirstName,
 		"middle_name":  user.MiddleName,
@@ -46,6 +46,7 @@ func userResource(accID string, user *galileo.Customer) (*v2.Resource, error) {
 			rs.WithStatus(v2.UserTrait_Status_STATUS_ENABLED),
 			rs.WithAccountType(v2.UserTrait_ACCOUNT_TYPE_HUMAN),
 		},
+		rs.WithParentResourceID(parentResource),
 	)
 	if err != nil {
 		return nil, err
@@ -54,18 +55,17 @@ func userResource(accID string, user *galileo.Customer) (*v2.Resource, error) {
 	return resource, nil
 }
 
-func (u *userBuilder) GetPrimaryAccount(ctx context.Context) (*v2.Resource, error) {
-	pID := u.client.GetPrimaryAccountNumber()
-	customer, err := u.client.GetCustomer(ctx, pID)
+func (u *userBuilder) GetAccountCustomer(ctx context.Context, accID string, parentResourceID *v2.ResourceId) (*v2.Resource, error) {
+	customer, err := u.client.GetCustomer(ctx, accID)
 	if err != nil {
 		return nil, fmt.Errorf("galileo-ft-connector: failed to get customer: %w", err)
 	}
 
-	return userResource(pID, customer)
+	return userResource(accID, customer, parentResourceID)
 }
 
-func (u *userBuilder) ListRelatedAccounts(ctx context.Context) ([]*v2.Resource, error) {
-	accounts, err := u.client.ListRelatedAccounts(ctx)
+func (u *userBuilder) ListRelatedCustomers(ctx context.Context, accID string, parentResourceID *v2.ResourceId) ([]*v2.Resource, error) {
+	accounts, err := u.client.ListRelatedAccounts(ctx, accID)
 	if err != nil {
 		return nil, fmt.Errorf("galileo-ft-connector: failed to list related accounts: %w", err)
 	}
@@ -77,7 +77,7 @@ func (u *userBuilder) ListRelatedAccounts(ctx context.Context) ([]*v2.Resource, 
 			return nil, fmt.Errorf("galileo-ft-connector: failed to get customer: %w", err)
 		}
 
-		ur, err := userResource(acc.ID, customer)
+		ur, err := userResource(acc.ID, customer, parentResourceID)
 		if err != nil {
 			return nil, fmt.Errorf("galileo-ft-connector: failed to create user resource: %w", err)
 		}
@@ -90,24 +90,34 @@ func (u *userBuilder) ListRelatedAccounts(ctx context.Context) ([]*v2.Resource, 
 
 // List returns all the users from the database as resource objects.
 // Users include a UserTrait because they are the 'shape' of a standard user.
-func (u *userBuilder) List(ctx context.Context, _ *v2.ResourceId, _ *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
+func (u *userBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, _ *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
+	if parentResourceID == nil {
+		return nil, "", nil, nil
+	}
+
+	group, err := u.client.ListGroupMembers(ctx, parentResourceID.Resource)
+	if err != nil {
+		return nil, "", nil, fmt.Errorf("galileo-ft-connector: failed to list accounts under group %s: %w", parentResourceID.Resource, err)
+	}
+
 	var rv []*v2.Resource
+	for _, accID := range group.AccountIDs {
+		// first get the customer of the parent user
+		parent, err := u.GetAccountCustomer(ctx, accID, parentResourceID)
+		if err != nil {
+			return nil, "", nil, err
+		}
 
-	// first add the primary account customer as a user
-	primary, err := u.GetPrimaryAccount(ctx)
-	if err != nil {
-		return nil, "", nil, err
+		rv = append(rv, parent)
+
+		// then get the related children accounts of the parent user
+		accounts, err := u.ListRelatedCustomers(ctx, accID, parentResourceID)
+		if err != nil {
+			return nil, "", nil, err
+		}
+
+		rv = append(rv, accounts...)
 	}
-
-	rv = append(rv, primary)
-
-	// then add all related accounts and their customers as users
-	accounts, err := u.ListRelatedAccounts(ctx)
-	if err != nil {
-		return nil, "", nil, err
-	}
-
-	rv = append(rv, accounts...)
 
 	return rv, "", nil, nil
 }
