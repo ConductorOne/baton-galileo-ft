@@ -54,28 +54,60 @@ func userResource(accID string, user *galileo.Customer) (*v2.Resource, error) {
 	return resource, nil
 }
 
-// List returns all the users from the database as resource objects.
-// Users include a UserTrait because they are the 'shape' of a standard user.
-func (u *userBuilder) List(ctx context.Context, _ *v2.ResourceId, _ *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
+func (u *userBuilder) GetPrimaryAccount(ctx context.Context) (*v2.Resource, error) {
+	pID := u.client.GetPrimaryAccountNumber()
+	customer, err := u.client.GetCustomer(ctx, pID)
+	if err != nil {
+		return nil, fmt.Errorf("galileo-ft-connector: failed to get customer: %w", err)
+	}
+
+	return userResource(pID, customer)
+}
+
+func (u *userBuilder) ListRelatedAccounts(ctx context.Context) ([]*v2.Resource, error) {
 	accounts, err := u.client.ListRelatedAccounts(ctx)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("galileo-ft-connector: failed to list users: %w", err)
+		return nil, fmt.Errorf("galileo-ft-connector: failed to list related accounts: %w", err)
 	}
 
 	var rv []*v2.Resource
 	for _, acc := range accounts {
 		customer, err := u.client.GetCustomer(ctx, acc.ID)
 		if err != nil {
-			return nil, "", nil, fmt.Errorf("galileo-ft-connector: failed to get customer: %w", err)
+			return nil, fmt.Errorf("galileo-ft-connector: failed to get customer: %w", err)
 		}
 
 		ur, err := userResource(acc.ID, customer)
 		if err != nil {
-			return nil, "", nil, fmt.Errorf("galileo-ft-connector: failed to create user resource: %w", err)
+			return nil, fmt.Errorf("galileo-ft-connector: failed to create user resource: %w", err)
 		}
 
 		rv = append(rv, ur)
 	}
+
+	return rv, nil
+}
+
+// List returns all the users from the database as resource objects.
+// Users include a UserTrait because they are the 'shape' of a standard user.
+func (u *userBuilder) List(ctx context.Context, _ *v2.ResourceId, _ *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
+	var rv []*v2.Resource
+
+	// first add the primary account customer as a user
+	primary, err := u.GetPrimaryAccount(ctx)
+	if err != nil {
+		return nil, "", nil, err
+	}
+
+	rv = append(rv, primary)
+
+	// then add all related accounts and their customers as users
+	accounts, err := u.ListRelatedAccounts(ctx)
+	if err != nil {
+		return nil, "", nil, err
+	}
+
+	rv = append(rv, accounts...)
 
 	return rv, "", nil, nil
 }
