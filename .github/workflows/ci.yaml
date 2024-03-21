@@ -49,7 +49,7 @@ jobs:
     #       POSTGRES_PASSWORD: secretpassword
     env:
       BATON_LOG_LEVEL: debug
-      # Add any environment variables needed to run baton-baton-galileo-ft
+      # Add any environment variables needed to run baton-galileo-ft
       # BATON_BASE_URL: 'http://localhost:8080'
       # BATON_ACCESS_TOKEN: 'secret_token'
       # The following parameters are passed to grant/revoke commands
@@ -64,7 +64,7 @@ jobs:
         with:
           go-version: 1.22.x
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       # Install any dependencies here (or delete this)
       # - name: Install postgres client
       #   run: sudo apt install postgresql-client
@@ -73,10 +73,10 @@ jobs:
       #   run: psql -h localhost --user postgres -f environment.sql
       #   env:
       #     PGPASSWORD: secretpassword
-      - name: Build baton-baton-galileo-ft
-        run: go build ./cmd/baton-baton-galileo-ft
-      - name: Run baton-baton-galileo-ft
-        run: ./baton-baton-galileo-ft
+      - name: Build baton-galileo-ft
+        run: go build ./cmd/baton-galileo-ft
+      - name: Run baton-galileo-ft
+        run: ./baton-galileo-ft
 
       - name: Install baton
         run: ./scripts/get-baton.sh && mv baton /usr/local/bin
@@ -86,14 +86,14 @@ jobs:
           baton grants --entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | jq --exit-status ".grants[].principal.id.resource == \"${{ env.CONNECTOR_PRINCIPAL }}\""
 
       - name: Revoke grants
-        run: ./baton-baton-galileo-ft --revoke-grant="${{ env.CONNECTOR_GRANT }}"
+        run: ./baton-galileo-ft --revoke-grant="${{ env.CONNECTOR_GRANT }}"
 
       - name: Check grant was revoked
-        run: ./baton-baton-galileo-ft && baton grants --entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | jq --exit-status "if .grants then .grants[]?.principal.id.resource != \"${{ env.CONNECTOR_PRINCIPAL }}\" else . end"
+        run: ./baton-galileo-ft && baton grants --entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | jq --exit-status "if .grants then .grants[]?.principal.id.resource != \"${{ env.CONNECTOR_PRINCIPAL }}\" else . end"
 
       - name: Grant entitlement
         # Change the grant arguments to the correct IDs for your test data
-        run: ./baton-baton-galileo-ft --grant-entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --grant-principal="${{ env.CONNECTOR_PRINCIPAL }}" --grant-principal-type="${{ env.CONNECTOR_PRINCIPAL_TYPE }}"
+        run: ./baton-galileo-ft --grant-entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --grant-principal="${{ env.CONNECTOR_PRINCIPAL }}" --grant-principal-type="${{ env.CONNECTOR_PRINCIPAL_TYPE }}"
 
       - name: Check grant was re-granted
         run: baton grants --entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | jq --exit-status ".grants[].principal.id.resource == \"${{ env.CONNECTOR_PRINCIPAL }}\""
