@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 
 	"github.com/conductorone/baton-sdk/pkg/uhttp"
 )
@@ -284,11 +283,7 @@ func (c *Client) post(ctx context.Context, path string, form *url.Values, respon
 }
 
 func checkContentType(contentType string) error {
-	if !strings.HasPrefix(contentType, "application") {
-		return fmt.Errorf("unexpected content type %s", contentType)
-	}
-
-	if !strings.Contains(contentType, "json") {
+	if contentType != "application/json" {
 		return fmt.Errorf("unexpected content type %s", contentType)
 	}
 

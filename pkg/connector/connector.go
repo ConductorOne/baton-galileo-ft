@@ -44,7 +44,7 @@ func (g *Galileo) Metadata(ctx context.Context) (*v2.ConnectorMetadata, error) {
 func (g *Galileo) Validate(ctx context.Context) (annotations.Annotations, error) {
 	err := g.client.Ping(ctx)
 	if err != nil {
-		return nil, status.Error(codes.Unauthenticated, "calendly-connector: failed to validate credentials")
+		return nil, status.Error(codes.Unauthenticated, "galileo-ft-connector: failed to validate credentials")
 	}
 
 	return nil, nil
