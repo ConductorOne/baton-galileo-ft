@@ -115,7 +115,7 @@ func (c *Client) GetCustomer(ctx context.Context, accountID string) (*Customer, 
 
 // https://docs.galileo-ft.com/pro/reference/post_getrootgroups
 func (c *Client) ListRootGroups(ctx context.Context, pgVars *PaginationVars) ([]Group, uint, error) {
-	var res ListReponse[Group]
+	var res ListResponse[Group]
 
 	data := &FormData{
 		APILogin:    c.config.APILogin,
