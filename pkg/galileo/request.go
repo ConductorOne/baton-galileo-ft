@@ -64,18 +64,14 @@ func prepareForm(data *FormData) *url.Values {
 		form.Set("groupId", data.GroupID)
 	}
 
-	// set group ids, if provided
-	if data.GroupIDs != nil && len(data.GroupIDs) > 0 {
-		for _, id := range data.GroupIDs {
-			form.Add("groupIds", id)
-		}
+	// In Go, if `data.GroupIDs` is nil, this is a noop.
+	for _, id := range data.GroupIDs {
+		form.Add("groupIds", id)
 	}
 
-	// set account ids, if provided
-	if data.AccountIDs != nil && len(data.AccountIDs) > 0 {
-		for _, id := range data.AccountIDs {
-			form.Add("accountNos", id)
-		}
+	// In Go, if `data.AccountIDs` is nil, this is a noop.
+	for _, id := range data.AccountIDs {
+		form.Add("accountNos", id)
 	}
 
 	return form

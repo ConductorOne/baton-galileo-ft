@@ -4,7 +4,7 @@ type BaseResponse[T any] struct {
 	Data T `json:"response_data"`
 }
 
-type ListReponse[T any] struct {
+type ListResponse[T any] struct {
 	Data       []T  `json:"response_data"`
 	Page       uint `json:"page"`
 	NumOfPages uint `json:"number_of_pages"`
