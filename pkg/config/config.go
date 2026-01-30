@@ -10,7 +10,6 @@ var (
 		field.WithDisplayName("Galileo-FT API Login"),
 		field.WithRequired(true),
 		field.WithDescription("The username provided by Galileo-FT for API access."),
-		field.WithIsSecret(true),
 	)
 	apiTransKeyField = field.StringField(
 		"api-trans-key",
