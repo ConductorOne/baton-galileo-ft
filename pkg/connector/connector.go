@@ -4,9 +4,11 @@ import (
 	"context"
 	"io"
 
+	cfg "github.com/conductorone/baton-galileo-ft/pkg/config"
 	"github.com/conductorone/baton-galileo-ft/pkg/galileo"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
+	"github.com/conductorone/baton-sdk/pkg/cli"
 	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
 	"github.com/conductorone/baton-sdk/pkg/uhttp"
 	"google.golang.org/grpc/codes"
@@ -18,8 +20,8 @@ type Galileo struct {
 }
 
 // ResourceSyncers returns a ResourceSyncer for each resource type that should be synced from the upstream service.
-func (g *Galileo) ResourceSyncers(ctx context.Context) []connectorbuilder.ResourceSyncer {
-	return []connectorbuilder.ResourceSyncer{
+func (g *Galileo) ResourceSyncers(ctx context.Context) []connectorbuilder.ResourceSyncerV2 {
+	return []connectorbuilder.ResourceSyncerV2{
 		newUserBuilder(g.client),
 		newGroupBuilder(g.client),
 	}
@@ -51,13 +53,18 @@ func (g *Galileo) Validate(ctx context.Context) (annotations.Annotations, error)
 }
 
 // New returns a new instance of the connector.
-func New(ctx context.Context, cfg *galileo.Config) (*Galileo, error) {
+func New(ctx context.Context, cc *cfg.GalileoFt, opts *cli.ConnectorOpts) (connectorbuilder.ConnectorBuilderV2, []connectorbuilder.Opt, error) {
 	httpClient, err := uhttp.NewClient(ctx, uhttp.WithLogger(true, nil))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	return &Galileo{
-		client: galileo.NewClient(httpClient, cfg),
-	}, nil
+		client: galileo.NewClient(httpClient, &galileo.Config{
+			Hostname:    cc.Hostname,
+			APILogin:    cc.ApiLogin,
+			APITransKey: cc.ApiTransKey,
+			ProviderID:  cc.ProviderId,
+		}),
+	}, nil, nil
 }
