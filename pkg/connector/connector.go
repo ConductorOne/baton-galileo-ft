@@ -8,7 +8,6 @@ import (
 	"github.com/conductorone/baton-galileo-ft/pkg/galileo"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
-	"github.com/conductorone/baton-sdk/pkg/cli"
 	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
 	"github.com/conductorone/baton-sdk/pkg/uhttp"
 	"google.golang.org/grpc/codes"
@@ -53,10 +52,10 @@ func (g *Galileo) Validate(ctx context.Context) (annotations.Annotations, error)
 }
 
 // New returns a new instance of the connector.
-func New(ctx context.Context, cc *cfg.GalileoFt, opts *cli.ConnectorOpts) (connectorbuilder.ConnectorBuilderV2, []connectorbuilder.Opt, error) {
+func New(ctx context.Context, cc *cfg.GalileoFt) (connectorbuilder.ConnectorBuilderV2, error) {
 	httpClient, err := uhttp.NewClient(ctx, uhttp.WithLogger(true, nil))
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	return &Galileo{
@@ -66,5 +65,5 @@ func New(ctx context.Context, cc *cfg.GalileoFt, opts *cli.ConnectorOpts) (conne
 			APITransKey: cc.ApiTransKey,
 			ProviderID:  cc.ProviderId,
 		}),
-	}, nil, nil
+	}, nil
 }
