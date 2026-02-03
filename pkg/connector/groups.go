@@ -77,14 +77,14 @@ func (g *groupBuilder) List(ctx context.Context, _ *v2.ResourceId, attrs rs.Sync
 	var page int
 	var err error
 	pToken := attrs.PageToken
-	if pToken != "" {
-		page, err = strconv.Atoi(pToken)
+	if pToken.Token != "" {
+		page, err = strconv.Atoi(pToken.Token)
 		if err != nil {
 			return nil, nil, fmt.Errorf("galileo-ft-connector: failed to parse page token: %w", err)
 		}
 	}
 
-	pgVars := galileo.NewPaginationVars(page, ResourcesPageSize)
+	pgVars := galileo.NewPaginationVars(uint(page), ResourcesPageSize)
 	groups, totalNumOfPages, err := g.client.ListRootGroups(ctx, pgVars)
 	if err != nil {
 		return nil, nil, fmt.Errorf("galileo-ft-connector: failed to list root groups: %w", err)
@@ -129,7 +129,7 @@ func (g *groupBuilder) List(ctx context.Context, _ *v2.ResourceId, attrs rs.Sync
 
 	results := &rs.SyncOpResults{}
 	if page+1 < int(totalNumOfPages) {
-		results.NextPage = strconv.Itoa(page + 1)
+		results.NextPageToken = strconv.Itoa(page + 1)
 	}
 
 	return rv, results, nil

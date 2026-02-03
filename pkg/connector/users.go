@@ -6,7 +6,6 @@ import (
 
 	"github.com/conductorone/baton-galileo-ft/pkg/galileo"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
-	"github.com/conductorone/baton-sdk/pkg/annotations"
 	rs "github.com/conductorone/baton-sdk/pkg/types/resource"
 )
 
