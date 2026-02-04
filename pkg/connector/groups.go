@@ -84,7 +84,7 @@ func (g *groupBuilder) List(ctx context.Context, _ *v2.ResourceId, attrs rs.Sync
 		}
 	}
 
-	pgVars := galileo.NewPaginationVars(uint(page), ResourcesPageSize) // nolint:gosec // G115: page is validated from API response
+	pgVars := galileo.NewPaginationVars(uint(page), ResourcesPageSize) //nolint:gosec // G115: page is validated from API response
 	groups, totalNumOfPages, err := g.client.ListRootGroups(ctx, pgVars)
 	if err != nil {
 		return nil, nil, fmt.Errorf("galileo-ft-connector: failed to list root groups: %w", err)
@@ -128,7 +128,7 @@ func (g *groupBuilder) List(ctx context.Context, _ *v2.ResourceId, attrs rs.Sync
 	}
 
 	results := &rs.SyncOpResults{}
-	if page+1 < int(totalNumOfPages) { // nolint:gosec // G115: totalNumOfPages is from API response
+	if page+1 < int(totalNumOfPages) { //nolint:gosec // G115: totalNumOfPages is from API response
 		results.NextPageToken = strconv.Itoa(page + 1)
 	}
 
