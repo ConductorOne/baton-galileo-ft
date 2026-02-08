@@ -27,6 +27,7 @@ const (
 
 type Config struct {
 	Hostname    string `mapstructure:"hostname"`
+	BaseURL     string `mapstructure:"base-url"`
 	APILogin    string `mapstructure:"api-login"`
 	APITransKey string `mapstructure:"api-trans-key"`
 	ProviderID  string `mapstructure:"provider-id"`
@@ -38,14 +39,21 @@ type Client struct {
 	baseUrl    *url.URL
 }
 
-func NewClient(httpClient *http.Client, config *Config) *Client {
+func NewClient(httpClient *http.Client, config *Config) (*Client, error) {
 	b := &url.URL{
 		Scheme: "https",
 		Host:   BaseHost,
 	}
 
-	// Override the default host if a hostname is provided
-	if config.Hostname != "" {
+	// BaseURL takes precedence over Hostname if both are provided
+	if config.BaseURL != "" {
+		parsedURL, err := url.Parse(config.BaseURL)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse base URL: %w", err)
+		}
+		b = parsedURL
+	} else if config.Hostname != "" {
+		// Deprecated: use BaseURL instead
 		b.Host = config.Hostname
 	}
 
@@ -53,7 +61,7 @@ func NewClient(httpClient *http.Client, config *Config) *Client {
 		httpClient: uhttp.NewBaseHttpClient(httpClient),
 		config:     config,
 		baseUrl:    b,
-	}
+	}, nil
 }
 
 func (c *Client) Ping(ctx context.Context) error {
