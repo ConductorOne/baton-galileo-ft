@@ -1,8 +1,8 @@
 ![Baton Logo](./docs/images/baton-logo.png)
 # baton-galileo-ft
-Welcome to your new connector! 
+Welcome to your new connector!
 
-# `baton-galileo-ft` [![Go Reference](https://pkg.go.dev/badge/github.com/conductorone/baton-galileo-ft.svg)](https://pkg.go.dev/github.com/conductorone/baton-galileo-ft) ![main ci](https://github.com/conductorone/baton-galileo-ft/actions/workflows/main.yaml/badge.svg)
+# `baton-galileo-ft` [![Go Reference](https://pkg.go.dev/badge/github.com/conductorone/baton-galileo-ft.svg)](https://pkg.go.dev/github.com/conductorone/baton-galileo-ft) ![ci](https://github.com/conductorone/baton-galileo-ft/actions/workflows/ci.yaml/badge.svg)
 
 `baton-galileo-ft` is an example connector built using the [Baton SDK](https://github.com/conductorone/baton-sdk). It uses hardcoded data to provide a simple example of how to build your own connector with Baton.
 
@@ -31,7 +31,7 @@ docker run --rm -v $(pwd):/out ghcr.io/conductorone/baton:latest -f "/out/sync.c
 go install github.com/conductorone/baton/cmd/baton@main
 go install github.com/conductorone/baton-galileo-ft/cmd/baton-galileo-ft@main
 
-BATON_API_LOGIN=api_login BATON_API_TRANS_KEY=api_trans_key BATON_PROVIDER_ID=provider_id baton-galileo-ft 
+BATON_API_LOGIN=api_login BATON_API_TRANS_KEY=api_trans_key BATON_PROVIDER_ID=provider_id baton-galileo-ft
 baton resources
 ```
 
