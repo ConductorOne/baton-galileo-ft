@@ -44,6 +44,7 @@ var (
 	baseURLField = field.StringField(
 		baseURL,
 		field.WithDescription("Override the Galileo FT API URL (for testing)."),
+		field.WithHidden(true),
 	)
 	providerIDField = field.StringField(
 		providerID,
