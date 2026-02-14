@@ -23,6 +23,7 @@ const (
 	apiTransKey   = "api-trans-key"
 	providerID    = "provider-id"
 	hostname      = "hostname"
+	baseURL       = "base-url"
 )
 
 var (
@@ -38,14 +39,19 @@ var (
 	)
 	hostnameField = field.StringField(
 		hostname,
-		field.WithDescription("URL hostname for production hostname."),
+		field.WithDescription("URL hostname for production hostname (deprecated: use --base-url instead)."),
+	)
+	baseURLField = field.StringField(
+		baseURL,
+		field.WithDescription("Override the Galileo FT API URL (for testing)."),
+		field.WithHidden(true),
 	)
 	providerIDField = field.StringField(
 		providerID,
 		field.WithRequired(true),
 		field.WithDescription("A unique identifier from Galileo-FT representing your organization, used for tracking transactions and data."),
 	)
-	configurationFields = []field.SchemaField{apiLoginField, apiTransKeyField, providerIDField, hostnameField}
+	configurationFields = []field.SchemaField{apiLoginField, apiTransKeyField, providerIDField, hostnameField, baseURLField}
 )
 
 func main() {
@@ -72,6 +78,7 @@ func getConnector(ctx context.Context, cfg *viper.Viper) (types.ConnectorServer,
 	l := ctxzap.Extract(ctx)
 	cb, err := connector.New(ctx, &galileo.Config{
 		Hostname:    cfg.GetString(hostname),
+		BaseURL:     cfg.GetString(baseURL),
 		APILogin:    cfg.GetString(apiLogin),
 		APITransKey: cfg.GetString(apiTransKey),
 		ProviderID:  cfg.GetString(providerID),
