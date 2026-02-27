@@ -57,7 +57,12 @@ func New(ctx context.Context, cfg *galileo.Config) (*Galileo, error) {
 		return nil, err
 	}
 
+	client, err := galileo.NewClient(httpClient, cfg)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Galileo{
-		client: galileo.NewClient(httpClient, cfg),
+		client: client,
 	}, nil
 }
