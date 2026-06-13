@@ -36,6 +36,7 @@ var (
 		apiTransKey,
 		field.WithRequired(true),
 		field.WithDescription("The password provided by Galileo-FT, used alongside the api-login."),
+		field.WithIsSecret(true),
 	)
 	hostnameField = field.StringField(
 		hostname,
