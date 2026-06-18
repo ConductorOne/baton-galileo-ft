@@ -39,6 +39,7 @@ var (
 	baseURLField = field.StringField(
 		"base-url",
 		field.WithDescription("Override the Galileo FT API URL (for testing)."),
+		field.WithHidden(true),
 	)
 )
 
