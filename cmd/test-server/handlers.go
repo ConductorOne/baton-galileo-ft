@@ -48,6 +48,14 @@ func writeGalileoError(w http.ResponseWriter, httpStatus, code int, status strin
 	})
 }
 
+// writeEmpty writes HTTP 200 with Content-Type: application/json and no body.
+// Used for write endpoints (add/remove) where the connector passes nil as the
+// response target and uhttp.WithJSONResponse(nil) only accepts empty bodies.
+func writeEmpty(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+}
+
 // writeSuccess writes {"response_data": data}.
 // Mirror of galileo.BaseResponse.
 func writeSuccess(w http.ResponseWriter, data any) {
@@ -257,14 +265,12 @@ func (s *Server) handleSetAccountGroupRelationships(w http.ResponseWriter, r *ht
 			return
 		}
 		if alreadyMember {
-			// Account already belongs to this group — treat as success (idempotent).
-			// The connector does not check IsAlreadyExistsError for grants, so we return 200.
-			writeSuccess(w, map[string]any{})
+			writeEmpty(w)
 			return
 		}
 	}
 
-	writeSuccess(w, map[string]any{})
+	writeEmpty(w)
 }
 
 // handleRemoveAccountGroupRelationship removes an account from its current group (provisioning Revoke).
@@ -290,13 +296,12 @@ func (s *Server) handleRemoveAccountGroupRelationship(w http.ResponseWriter, r *
 			return
 		}
 		if notMember {
-			// Account is not a member of any group — treat as success (idempotent).
-			writeSuccess(w, map[string]any{})
+			writeEmpty(w)
 			return
 		}
 	}
 
-	writeSuccess(w, map[string]any{})
+	writeEmpty(w)
 }
 
 func atoiOr(s string, def int) int {
