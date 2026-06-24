@@ -182,7 +182,7 @@ func (g *groupBuilder) Grant(ctx context.Context, principal *v2.Resource, entitl
 		return nil, fmt.Errorf("galileo-ft-connector: only users can be granted group membership")
 	}
 
-	err := g.client.AddAccountToGroup(ctx, principal.Id.Resource, entitlement.Resource.Id.Resource)
+	err := g.client.AddAccountToGroup(ctx, entitlement.Resource.Id.Resource, principal.Id.Resource)
 	if err != nil {
 		return nil, fmt.Errorf("galileo-ft-connector: failed to grant group membership: %w", err)
 	}
@@ -206,7 +206,7 @@ func (g *groupBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotations
 		return nil, fmt.Errorf("galileo-ft-connector: only users can have group membership revoked")
 	}
 
-	err := g.client.RemoveAccountFromGroup(ctx, principal.Id.Resource, entitlement.Resource.Id.Resource)
+	err := g.client.RemoveAccountFromGroup(ctx, entitlement.Resource.Id.Resource, principal.Id.Resource)
 	if err != nil {
 		return nil, fmt.Errorf("galileo-ft-connector: failed to revoke group membership: %w", err)
 	}
