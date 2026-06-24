@@ -13,8 +13,8 @@ jobs:
       BATON_API_TRANS_KEY: test-trans-key
       BATON_PROVIDER_ID: test-provider-id
       BATON_BASE_URL: http://localhost:8765
-      CONNECTOR_ENTITLEMENT: 'group:group-03:member'
-      CONNECTOR_PRINCIPAL: 'acc-prn-004'
+      CONNECTOR_ENTITLEMENT: 'group:group-01:member'
+      CONNECTOR_PRINCIPAL: 'acc-prn-005'
       CONNECTOR_PRINCIPAL_TYPE: 'user'
     steps:
       - name: Checkout code
