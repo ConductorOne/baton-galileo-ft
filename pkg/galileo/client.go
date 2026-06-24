@@ -305,6 +305,10 @@ type ErrorResponse struct {
 
 func WithErrorResponse() uhttp.DoOption {
 	return func(resp *uhttp.WrapperResponse) error {
+		if resp.StatusCode < 300 {
+			return nil
+		}
+
 		if err := checkContentType(resp.Header.Get("Content-Type")); err != nil {
 			return fmt.Errorf("%w - %v", err, string(resp.Body))
 		}
