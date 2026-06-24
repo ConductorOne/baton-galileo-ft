@@ -1,5 +1,9 @@
 name: ci
-on: pull_request
+on:
+  pull_request:
+  push:
+    branches:
+      - main
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -13,33 +17,21 @@ jobs:
       CONNECTOR_PRINCIPAL: 'user:9876'
       CONNECTOR_PRINCIPAL_TYPE: 'user'
     steps:
-      - name: Install Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: 1.22.x
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: "go.mod"
       - name: Build baton-galileo-ft
         run: go build ./cmd/baton-galileo-ft
       - name: Run baton-galileo-ft
         run: ./baton-galileo-ft
 
-      - name: Install baton
-        run: ./scripts/get-baton.sh && mv baton /usr/local/bin
-
-      - name: Check for grant before revoking
-        run:
-          baton grants --entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | jq --exit-status ".grants[].principal.id.resource == \"${{ env.CONNECTOR_PRINCIPAL }}\""
-
-      - name: Revoke grants
-        run: ./baton-galileo-ft --revoke-grant="${{ env.CONNECTOR_GRANT }}"
-
-      - name: Check grant was revoked
-        run: ./baton-galileo-ft && baton grants --entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | jq --exit-status "if .grants then .grants[]?.principal.id.resource != \"${{ env.CONNECTOR_PRINCIPAL }}\" else . end"
-
-      - name: Grant entitlement
-        # Change the grant arguments to the correct IDs for your test data
-        run: ./baton-galileo-ft --grant-entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --grant-principal="${{ env.CONNECTOR_PRINCIPAL }}" --grant-principal-type="${{ env.CONNECTOR_PRINCIPAL_TYPE }}"
-
-      - name: Check grant was re-granted
-        run: baton grants --entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | jq --exit-status ".grants[].principal.id.resource == \"${{ env.CONNECTOR_PRINCIPAL }}\""
+      - name: Grant/revoke
+        uses: ConductorOne/github-workflows/actions/sync-test@v4
+        with:
+          connector: ./baton-galileo-ft
+          baton-entitlement: ${{ env.CONNECTOR_ENTITLEMENT }}
+          baton-principal: ${{ env.CONNECTOR_PRINCIPAL }}
+          baton-principal-type: ${{ env.CONNECTOR_PRINCIPAL_TYPE }}

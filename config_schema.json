@@ -133,13 +133,8 @@
     {
       "name": "hostname",
       "displayName": "Hostname",
-      "description": "URL hostname for production hostname (deprecated: use --base-url instead).",
+      "description": "URL hostname for production hostname.",
       "placeholder": "Your Galileo-FT hostname",
-      "stringField": {}
-    },
-    {
-      "name": "base-url",
-      "description": "Override the Galileo FT API URL (for testing).",
       "stringField": {}
     }
   ],
