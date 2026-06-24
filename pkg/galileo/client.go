@@ -53,7 +53,6 @@ func NewClient(httpClient *http.Client, config *Config) (*Client, error) {
 		}
 		b = parsedURL
 	} else if config.Hostname != "" {
-		// Deprecated: use BaseURL instead
 		b.Host = config.Hostname
 	}
 

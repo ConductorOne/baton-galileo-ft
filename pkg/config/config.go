@@ -33,12 +33,13 @@ var (
 	hostnameField = field.StringField(
 		"hostname",
 		field.WithDisplayName("Hostname"),
-		field.WithDescription("URL hostname for production hostname (deprecated: use --base-url instead)."),
+		field.WithDescription("URL hostname for production hostname."),
 		field.WithPlaceholder("Your Galileo-FT hostname"),
 	)
 	baseURLField = field.StringField(
 		"base-url",
 		field.WithDescription("Override the Galileo FT API URL (for testing)."),
+		field.WithExportTarget(field.ExportTargetCLIOnly),
 		field.WithHidden(true),
 	)
 )
