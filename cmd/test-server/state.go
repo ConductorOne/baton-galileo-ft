@@ -71,16 +71,22 @@ type State struct {
 
 	// accountRelated maps accountID → ordered list of related child account IDs.
 	accountRelated map[string][]string
+
+	// grantedMemberships tracks the most recent group added via AddAccountToGroup (not from seed).
+	// RemoveAccountFromGroup only removes this added membership, leaving seed groups intact so
+	// the account remains in the c1z after the revoke cycle and a second grant cycle still works.
+	grantedMemberships map[string]string // accID → groupID
 }
 
 func NewState() *State {
 	s := &State{
-		groups:         make(map[string]*Group),
-		accounts:       make(map[string]*Account),
-		customers:      make(map[string]*Customer),
-		groupChildren:  make(map[string][]string),
-		groupMembers:   make(map[string][]string),
-		accountRelated: make(map[string][]string),
+		groups:             make(map[string]*Group),
+		accounts:           make(map[string]*Account),
+		customers:          make(map[string]*Customer),
+		groupChildren:      make(map[string][]string),
+		groupMembers:       make(map[string][]string),
+		accountRelated:     make(map[string][]string),
+		grantedMemberships: make(map[string]string),
 	}
 	seed(s)
 	return s
@@ -173,6 +179,7 @@ func (s *State) GetRelatedAccounts(accID string) []*Account {
 }
 
 // AddAccountToGroup adds an account to a group, returning flags for the outcome.
+// Records the grant in grantedMemberships so RemoveAccountFromGroup can undo only this grant.
 func (s *State) AddAccountToGroup(groupID, accID string) (alreadyMember, groupExists, accountExists bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -186,23 +193,25 @@ func (s *State) AddAccountToGroup(groupID, accID string) (alreadyMember, groupEx
 		return true, true, true
 	}
 	s.groupMembers[groupID] = append(s.groupMembers[groupID], accID)
+	s.grantedMemberships[accID] = groupID
 	return false, true, true
 }
 
-// RemoveAccountFromGroup removes an account from a group. groupID is optional — if empty, finds the group automatically.
-// Returns notMember=true if the account is not in the specified group.
+// RemoveAccountFromGroup removes the most recently granted membership for accID (from grantedMemberships),
+// leaving any seed-time membership intact. This ensures the account remains discoverable in subsequent
+// sync cycles, so the sync-test@v4 two-cycle idempotency check can succeed.
+// Returns notMember=true if no granted membership exists for the account.
 func (s *State) RemoveAccountFromGroup(accID string) (notMember bool, accountExists bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if _, ok := s.accounts[accID]; !ok {
 		return false, false
 	}
-	for groupID, members := range s.groupMembers {
-		if slices.Contains(members, accID) {
-			s.groupMembers[groupID] = slices.DeleteFunc(members, func(id string) bool { return id == accID })
-			return false, true
-		}
+	groupID, ok := s.grantedMemberships[accID]
+	if !ok {
+		return true, true
 	}
-	// Account exists but is not a member of any group.
-	return true, true
+	s.groupMembers[groupID] = slices.DeleteFunc(s.groupMembers[groupID], func(id string) bool { return id == accID })
+	delete(s.grantedMemberships, accID)
+	return false, true
 }
