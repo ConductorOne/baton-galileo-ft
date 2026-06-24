@@ -9,12 +9,12 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BATON_LOG_LEVEL: debug
-      BATON_API_LOGIN: ${{ secrets.GALILEO_API_LOGIN }}
-      BATON_API_TRANS_KEY: ${{ secrets.GALILEO_API_TRANS_KEY }}
-      BATON_PROVIDER_ID: ${{ secrets.GALILEO_PROVIDER_ID }}
-      CONNECTOR_GRANT: 'grant:entitlement:group:1234:member:user:9876'
-      CONNECTOR_ENTITLEMENT: 'entitlement:group:1234:member'
-      CONNECTOR_PRINCIPAL: 'user:9876'
+      BATON_API_LOGIN: test-login
+      BATON_API_TRANS_KEY: test-trans-key
+      BATON_PROVIDER_ID: test-provider-id
+      BATON_BASE_URL: http://localhost:8765
+      CONNECTOR_ENTITLEMENT: 'group:group-03:member'
+      CONNECTOR_PRINCIPAL: 'acc-prn-004'
       CONNECTOR_PRINCIPAL_TYPE: 'user'
     steps:
       - name: Checkout code
@@ -25,9 +25,12 @@ jobs:
           go-version-file: "go.mod"
       - name: Build baton-galileo-ft
         run: go build ./cmd/baton-galileo-ft
+      - name: Start test server
+        run: go run ./cmd/test-server/ &
+      - name: Wait for test server
+        run: sleep 2
       - name: Run baton-galileo-ft
         run: ./baton-galileo-ft
-
       - name: Grant/revoke
         uses: ConductorOne/github-workflows/actions/sync-test@v4
         with:
