@@ -28,7 +28,12 @@ jobs:
       - name: Start test server
         run: go run ./cmd/test-server/ &
       - name: Wait for test server
-        run: sleep 2
+        run: |
+          for i in $(seq 1 30); do
+            curl -sf -X POST http://localhost:8765/intserv/4.0/ping \
+              -d 'apiLogin=test-login&apiTransKey=test-trans-key&providerId=test-provider-id' && break
+            sleep 1
+          done
       - name: Run baton-galileo-ft
         run: ./baton-galileo-ft
       - name: Grant/revoke
