@@ -92,7 +92,7 @@ func NewState() *State {
 	return s
 }
 
-func (s *State) GetRootGroupPage(page, count int) (page_ []*Group, numPages int) {
+func (s *State) GetRootGroupPage(page, count int) ([]*Group, int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	all := s.rootGroups
@@ -112,7 +112,7 @@ func (s *State) GetRootGroupPage(page, count int) (page_ []*Group, numPages int)
 		result[i] = &cp
 	}
 
-	numPages = (len(all) + count - 1) / count
+	numPages := (len(all) + count - 1) / count
 	if numPages == 0 {
 		numPages = 1
 	}
@@ -180,7 +180,7 @@ func (s *State) GetRelatedAccounts(accID string) []*Account {
 
 // AddAccountToGroup adds an account to a group, returning flags for the outcome.
 // Records the grant in grantedMemberships so RemoveAccountFromGroup can undo only this grant.
-func (s *State) AddAccountToGroup(groupID, accID string) (alreadyMember, groupExists, accountExists bool) {
+func (s *State) AddAccountToGroup(groupID, accID string) (bool, bool, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if _, ok := s.groups[groupID]; !ok {
@@ -201,7 +201,7 @@ func (s *State) AddAccountToGroup(groupID, accID string) (alreadyMember, groupEx
 // leaving any seed-time membership intact. This ensures the account remains discoverable in subsequent
 // sync cycles, so the sync-test@v4 two-cycle idempotency check can succeed.
 // Returns notMember=true if no granted membership exists for the account.
-func (s *State) RemoveAccountFromGroup(accID string) (notMember bool, accountExists bool) {
+func (s *State) RemoveAccountFromGroup(accID string) (bool, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if _, ok := s.accounts[accID]; !ok {

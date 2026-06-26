@@ -15,6 +15,7 @@ const (
 // parseAndValidate parses the form body and validates Galileo-FT credentials.
 // Returns the parsed form and true on success; writes an error response and returns false otherwise.
 func (s *Server) parseAndValidate(w http.ResponseWriter, r *http.Request) (bool, *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	if err := r.ParseForm(); err != nil {
 		writeGalileoError(w, http.StatusBadRequest, 400, "malformed request body")
 		return false, r

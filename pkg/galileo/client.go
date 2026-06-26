@@ -2,7 +2,6 @@ package galileo
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -279,20 +278,12 @@ func (c *Client) post(ctx context.Context, path string, form *url.Values, respon
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 
-	resp, err := c.httpClient.Do(req, uhttp.WithJSONResponse(response), WithErrorResponse())
+	resp, err := c.httpClient.Do(req, uhttp.WithJSONResponse(response), uhttp.WithErrorResponse(&ErrorResponse{}))
 	if err != nil {
 		return fmt.Errorf("failed to do request: %w", err)
 	}
 
 	defer resp.Body.Close()
-
-	return nil
-}
-
-func checkContentType(contentType string) error {
-	if contentType != "application/json" {
-		return fmt.Errorf("unexpected content type %s", contentType)
-	}
 
 	return nil
 }
@@ -303,21 +294,6 @@ type ErrorResponse struct {
 	Status string `json:"status"`
 }
 
-func WithErrorResponse() uhttp.DoOption {
-	return func(resp *uhttp.WrapperResponse) error {
-		if resp.StatusCode < 300 {
-			return nil
-		}
-
-		if err := checkContentType(resp.Header.Get("Content-Type")); err != nil {
-			return fmt.Errorf("%w - %v", err, string(resp.Body))
-		}
-
-		var response ErrorResponse
-		if err := json.Unmarshal(resp.Body, &response); err != nil {
-			return fmt.Errorf("failed to unmarshal response: %w", err)
-		}
-
-		return fmt.Errorf("%s (%d)", response.Status, response.Code)
-	}
+func (e *ErrorResponse) Message() string {
+	return fmt.Sprintf("%s (%d)", e.Status, e.Code)
 }

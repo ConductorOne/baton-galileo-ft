@@ -3,6 +3,8 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
+	"time"
 )
 
 const port = ":8765"
@@ -48,5 +50,14 @@ func main() {
 	mux.HandleFunc("POST /intserv/4.0/removeAccountGroupRelationship", server.handleRemoveAccountGroupRelationship)
 
 	log.Printf("Galileo-FT test server listening on %s\n", port)
-	log.Fatal(http.ListenAndServe(port, mux))
+	srv := &http.Server{
+		Addr:         port,
+		Handler:      mux,
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 30 * time.Second,
+	}
+	if err := srv.ListenAndServe(); err != nil {
+		log.Printf("server error: %v", err)
+		os.Exit(1)
+	}
 }
