@@ -10,15 +10,14 @@ var (
 	apiLoginField = field.StringField(
 		"api-login",
 		field.WithRequired(true),
-		field.WithDisplayName("API Login"),
+		field.WithDisplayName("Username"),
 		field.WithDescription("The username provided by Galileo-FT for API access."),
 		field.WithPlaceholder("Your Galileo-FT API login"),
-		field.WithIsSecret(true),
 	)
 	apiTransKeyField = field.StringField(
 		"api-trans-key",
 		field.WithRequired(true),
-		field.WithDisplayName("API Trans Key"),
+		field.WithDisplayName("Password"),
 		field.WithDescription("The password provided by Galileo-FT, used alongside the api-login."),
 		field.WithPlaceholder("Your Galileo-FT API transaction key"),
 		field.WithIsSecret(true),
@@ -26,7 +25,7 @@ var (
 	providerIDField = field.StringField(
 		"provider-id",
 		field.WithRequired(true),
-		field.WithDisplayName("Provider ID"),
+		field.WithDisplayName("Organization ID"),
 		field.WithDescription("A unique identifier from Galileo-FT representing your organization, used for tracking transactions and data."),
 		field.WithPlaceholder("Your Galileo-FT provider ID"),
 	)

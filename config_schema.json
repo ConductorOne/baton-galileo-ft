@@ -94,11 +94,10 @@
     },
     {
       "name": "api-login",
-      "displayName": "API Login",
+      "displayName": "Username",
       "description": "The username provided by Galileo-FT for API access.",
       "placeholder": "Your Galileo-FT API login",
       "isRequired": true,
-      "isSecret": true,
       "stringField": {
         "rules": {
           "isRequired": true
@@ -107,7 +106,7 @@
     },
     {
       "name": "api-trans-key",
-      "displayName": "API Trans Key",
+      "displayName": "Password",
       "description": "The password provided by Galileo-FT, used alongside the api-login.",
       "placeholder": "Your Galileo-FT API transaction key",
       "isRequired": true,
@@ -120,7 +119,7 @@
     },
     {
       "name": "provider-id",
-      "displayName": "Provider ID",
+      "displayName": "Organization ID",
       "description": "A unique identifier from Galileo-FT representing your organization, used for tracking transactions and data.",
       "placeholder": "Your Galileo-FT provider ID",
       "isRequired": true,
