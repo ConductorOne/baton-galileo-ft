@@ -41,11 +41,11 @@ func userResource(accID string, user *galileo.Customer, parentResource *v2.Resou
 		userResourceType,
 		accID,
 		[]rs.UserTraitOption{
-			rs.WithUserProfile(userProfile),
 			rs.WithEmail(user.Email, true),
-			rs.WithStatus(v2.UserTrait_Status_STATUS_ENABLED),
 			rs.WithAccountType(v2.UserTrait_ACCOUNT_TYPE_HUMAN),
 		},
+		rs.WithResourceProfile(userProfile),
+		rs.WithResourceStatus(v2.Status_RESOURCE_STATUS_ENABLED, ""),
 		rs.WithParentResourceID(parentResource),
 	)
 	if err != nil {

@@ -55,10 +55,8 @@ func groupResource(group *galileo.Group) (*v2.Resource, error) {
 		group.Name,
 		groupResourceType,
 		group.ID,
-		[]rs.GroupTraitOption{
-			rs.WithGroupProfile(groupProfile),
-		},
-		options...,
+		[]rs.GroupTraitOption{},
+		append(options, rs.WithResourceProfile(groupProfile))...,
 	)
 	if err != nil {
 		return nil, err
