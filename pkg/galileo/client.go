@@ -53,7 +53,6 @@ func NewClient(httpClient *http.Client, config *Config) (*Client, error) {
 		}
 		b = parsedURL
 	} else if config.Hostname != "" {
-		// Deprecated: use BaseURL instead
 		b.Host = config.Hostname
 	}
 
@@ -71,7 +70,8 @@ func (c *Client) Ping(ctx context.Context) error {
 		ProviderID:  c.config.ProviderID,
 	}
 
-	err := c.post(ctx, PingEndpoint, prepareForm(data), nil)
+	var res BaseResponse[json.RawMessage]
+	err := c.post(ctx, PingEndpoint, prepareForm(data), &res)
 	if err != nil {
 		return err
 	}
@@ -217,6 +217,10 @@ func (c *Client) ListGroupMembers(ctx context.Context, groupID string) (*GroupTo
 		return nil, fmt.Errorf("unexpected number of group to accounts responses: %d", len(res.Data))
 	}
 
+	if len(res.Data) == 0 {
+		return &GroupToAccounts{GroupID: groupID}, nil
+	}
+
 	return &res.Data[0], nil
 }
 
@@ -230,7 +234,8 @@ func (c *Client) AddAccountToGroup(ctx context.Context, groupID, accountID strin
 		AccountIDs:  []string{accountID},
 	}
 
-	err := c.post(ctx, AddAccountToGroupEndpoint, prepareForm(data), nil)
+	var res BaseResponse[json.RawMessage]
+	err := c.post(ctx, AddAccountToGroupEndpoint, prepareForm(data), &res)
 	if err != nil {
 		return err
 	}
@@ -239,7 +244,11 @@ func (c *Client) AddAccountToGroup(ctx context.Context, groupID, accountID strin
 }
 
 // https://docs.galileo-ft.com/pro/reference/post_removeaccountgrouprelationship
-func (c *Client) RemoveAccountFromGroup(ctx context.Context, groupID, accountID string) error {
+// Note: this endpoint has no groupId parameter (confirmed against the Galileo-FT API
+// reference) — it only accepts accountNos, so the account is removed from whatever
+// group it currently belongs to. This is safe because an account belongs to only one
+// group at a time: https://docs.galileo-ft.com/pro/docs/creating-a-corporate-hierarchy
+func (c *Client) RemoveAccountFromGroup(ctx context.Context, accountID string) error {
 	data := &FormData{
 		APILogin:    c.config.APILogin,
 		APITransKey: c.config.APITransKey,
@@ -247,7 +256,8 @@ func (c *Client) RemoveAccountFromGroup(ctx context.Context, groupID, accountID 
 		AccountIDs:  []string{accountID},
 	}
 
-	err := c.post(ctx, RemoveAccountFromGroupEndpoint, prepareForm(data), nil)
+	var res BaseResponse[json.RawMessage]
+	err := c.post(ctx, RemoveAccountFromGroupEndpoint, prepareForm(data), &res)
 	if err != nil {
 		return err
 	}
@@ -280,20 +290,12 @@ func (c *Client) post(ctx context.Context, path string, form *url.Values, respon
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 
-	resp, err := c.httpClient.Do(req, uhttp.WithJSONResponse(response), WithErrorResponse())
+	resp, err := c.httpClient.Do(req, uhttp.WithJSONResponse(response), uhttp.WithErrorResponse(&ErrorResponse{}))
 	if err != nil {
 		return fmt.Errorf("failed to do request: %w", err)
 	}
 
 	defer resp.Body.Close()
-
-	return nil
-}
-
-func checkContentType(contentType string) error {
-	if contentType != "application/json" {
-		return fmt.Errorf("unexpected content type %s", contentType)
-	}
 
 	return nil
 }
@@ -304,17 +306,6 @@ type ErrorResponse struct {
 	Status string `json:"status"`
 }
 
-func WithErrorResponse() uhttp.DoOption {
-	return func(resp *uhttp.WrapperResponse) error {
-		if err := checkContentType(resp.Header.Get("Content-Type")); err != nil {
-			return fmt.Errorf("%w - %v", err, string(resp.Body))
-		}
-
-		var response ErrorResponse
-		if err := json.Unmarshal(resp.Body, &response); err != nil {
-			return fmt.Errorf("failed to unmarshal response: %w", err)
-		}
-
-		return fmt.Errorf("%s (%d)", response.Status, response.Code)
-	}
+func (e *ErrorResponse) Message() string {
+	return fmt.Sprintf("%s (%d)", e.Status, e.Code)
 }

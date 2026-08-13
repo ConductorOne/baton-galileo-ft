@@ -3,11 +3,11 @@ package connector
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/conductorone/baton-galileo-ft/pkg/galileo"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
-	"github.com/conductorone/baton-sdk/pkg/pagination"
 	ent "github.com/conductorone/baton-sdk/pkg/types/entitlement"
 	"github.com/conductorone/baton-sdk/pkg/types/grant"
 	rs "github.com/conductorone/baton-sdk/pkg/types/resource"
@@ -71,16 +71,17 @@ func groupResource(group *galileo.Group) (*v2.Resource, error) {
 // - An account can belong to only one group at a time.
 // - The maximum number of levels below a root group is five, making six levels total.
 // More information about groups and their hierarchy: https://docs.galileo-ft.com/pro/docs/creating-a-corporate-hierarchy
-func (g *groupBuilder) List(ctx context.Context, _ *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
+func (g *groupBuilder) List(ctx context.Context, _ *v2.ResourceId, opts rs.SyncOpAttrs) ([]*v2.Resource, *rs.SyncOpResults, error) {
+	pToken := &opts.PageToken
 	bag, page, err := parsePageToken(pToken.Token, &v2.ResourceId{ResourceType: RootGroupsType})
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("galileo-ft-connector: failed to parse page token: %w", err)
+		return nil, nil, fmt.Errorf("galileo-ft-connector: failed to parse page token: %w", err)
 	}
 
 	pgVars := galileo.NewPaginationVars(page, ResourcesPageSize)
 	groups, totalNumOfPages, err := g.client.ListRootGroups(ctx, pgVars)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("galileo-ft-connector: failed to list root groups: %w", err)
+		return nil, nil, fmt.Errorf("galileo-ft-connector: failed to list root groups: %w", err)
 	}
 
 	var rv []*v2.Resource
@@ -88,7 +89,7 @@ func (g *groupBuilder) List(ctx context.Context, _ *v2.ResourceId, pToken *pagin
 		// Create a resource for each root group.
 		gr, err := groupResource(&rootGroup) // #nosec G601
 		if err != nil {
-			return nil, "", nil, fmt.Errorf("galileo-ft-connector: failed to create group resource: %w", err)
+			return nil, nil, fmt.Errorf("galileo-ft-connector: failed to create group resource: %w", err)
 		}
 
 		rv = append(rv, gr)
@@ -96,7 +97,7 @@ func (g *groupBuilder) List(ctx context.Context, _ *v2.ResourceId, pToken *pagin
 		// Check if have any children.
 		childrenGroupIDs, err := g.client.ListChildrenGroups(ctx, rootGroup.ID)
 		if err != nil {
-			return nil, "", nil, fmt.Errorf("galileo-ft-connector: failed to list children groups: %w", err)
+			return nil, nil, fmt.Errorf("galileo-ft-connector: failed to list children groups: %w", err)
 		}
 
 		if len(childrenGroupIDs) == 0 {
@@ -106,14 +107,14 @@ func (g *groupBuilder) List(ctx context.Context, _ *v2.ResourceId, pToken *pagin
 		// Fetch information about children groups
 		children, err := g.client.GetGroupsInfo(ctx, childrenGroupIDs)
 		if err != nil {
-			return nil, "", nil, fmt.Errorf("galileo-ft-connector: failed to get children groups info: %w", err)
+			return nil, nil, fmt.Errorf("galileo-ft-connector: failed to get children groups info: %w", err)
 		}
 
 		// Create a resource for each child group.
 		for _, group := range children {
 			cgr, err := groupResource(&group) // #nosec G601
 			if err != nil {
-				return nil, "", nil, fmt.Errorf("galileo-ft-connector: failed to create group resource: %w", err)
+				return nil, nil, fmt.Errorf("galileo-ft-connector: failed to create group resource: %w", err)
 			}
 
 			rv = append(rv, cgr)
@@ -123,13 +124,13 @@ func (g *groupBuilder) List(ctx context.Context, _ *v2.ResourceId, pToken *pagin
 	next := prepareNextToken(page, totalNumOfPages)
 	nextPage, err := bag.NextToken(next)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("galileo-ft-connector: failed to prepare next page token: %w", err)
+		return nil, nil, fmt.Errorf("galileo-ft-connector: failed to prepare next page token: %w", err)
 	}
 
-	return rv, nextPage, nil, nil
+	return rv, &rs.SyncOpResults{NextPageToken: nextPage}, nil
 }
 
-func (g *groupBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
+func (g *groupBuilder) Entitlements(_ context.Context, resource *v2.Resource, opts rs.SyncOpAttrs) ([]*v2.Entitlement, *rs.SyncOpResults, error) {
 	var rv []*v2.Entitlement
 
 	assignmentOptions := []ent.EntitlementOption{
@@ -140,27 +141,27 @@ func (g *groupBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ 
 
 	rv = append(rv, ent.NewAssignmentEntitlement(resource, GroupMembership, assignmentOptions...))
 
-	return rv, "", nil, nil
+	return rv, nil, nil
 }
 
-func (g *groupBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
+func (g *groupBuilder) Grants(ctx context.Context, resource *v2.Resource, opts rs.SyncOpAttrs) ([]*v2.Grant, *rs.SyncOpResults, error) {
 	var rv []*v2.Grant
 
 	group, err := g.client.ListGroupMembers(ctx, resource.Id.Resource)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("galileo-ft-connector: failed to list group members: %w", err)
+		return nil, nil, fmt.Errorf("galileo-ft-connector: failed to list group members: %w", err)
 	}
 
 	for _, accID := range group.AccountIDs {
 		accID, err := rs.NewResourceID(userResourceType, accID)
 		if err != nil {
-			return nil, "", nil, fmt.Errorf("galileo-ft-connector: failed to create user resource ID: %w", err)
+			return nil, nil, fmt.Errorf("galileo-ft-connector: failed to create user resource ID: %w", err)
 		}
 
 		rv = append(rv, grant.NewGrant(resource, GroupMembership, accID))
 	}
 
-	return rv, "", nil, nil
+	return rv, nil, nil
 }
 
 func (g *groupBuilder) Grant(ctx context.Context, principal *v2.Resource, entitlement *v2.Entitlement) (annotations.Annotations, error) {
@@ -176,7 +177,7 @@ func (g *groupBuilder) Grant(ctx context.Context, principal *v2.Resource, entitl
 		return nil, fmt.Errorf("galileo-ft-connector: only users can be granted group membership")
 	}
 
-	err := g.client.AddAccountToGroup(ctx, principal.Id.Resource, entitlement.Resource.Id.Resource)
+	err := g.client.AddAccountToGroup(ctx, entitlement.Resource.Id.Resource, principal.Id.Resource)
 	if err != nil {
 		return nil, fmt.Errorf("galileo-ft-connector: failed to grant group membership: %w", err)
 	}
@@ -184,11 +185,11 @@ func (g *groupBuilder) Grant(ctx context.Context, principal *v2.Resource, entitl
 	return nil, nil
 }
 
-func (g *groupBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotations.Annotations, error) {
+func (g *groupBuilder) Revoke(ctx context.Context, grantToRevoke *v2.Grant) (annotations.Annotations, error) {
 	l := ctxzap.Extract(ctx)
 
-	principal := grant.Principal
-	entitlement := grant.Entitlement
+	principal := grantToRevoke.Principal
+	entitlement := grantToRevoke.Entitlement
 
 	if principal.Id.ResourceType != userResourceType.Id {
 		l.Warn(
@@ -200,7 +201,20 @@ func (g *groupBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotations
 		return nil, fmt.Errorf("galileo-ft-connector: only users can have group membership revoked")
 	}
 
-	err := g.client.RemoveAccountFromGroup(ctx, principal.Id.Resource, entitlement.Resource.Id.Resource)
+	// RemoveAccountFromGroup can't be scoped to a specific group — it removes the account from
+	// whatever group it currently belongs to. Check membership in the entitlement's group first so
+	// a revoke against a stale grant (the account has since moved to a different group) doesn't
+	// strip the account's current, unrelated group membership.
+	groupToAccounts, err := g.client.ListGroupMembers(ctx, entitlement.Resource.Id.Resource)
+	if err != nil {
+		return nil, fmt.Errorf("galileo-ft-connector: failed to list group members: %w", err)
+	}
+
+	if !slices.Contains(groupToAccounts.AccountIDs, principal.Id.Resource) {
+		return annotations.New(&v2.GrantAlreadyRevoked{}), nil
+	}
+
+	err = g.client.RemoveAccountFromGroup(ctx, principal.Id.Resource)
 	if err != nil {
 		return nil, fmt.Errorf("galileo-ft-connector: failed to revoke group membership: %w", err)
 	}
