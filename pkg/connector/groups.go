@@ -3,6 +3,7 @@ package connector
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/conductorone/baton-galileo-ft/pkg/galileo"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
@@ -188,10 +189,11 @@ func (g *groupBuilder) Grant(ctx context.Context, principal *v2.Resource, entitl
 	return nil, nil
 }
 
-func (g *groupBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotations.Annotations, error) {
+func (g *groupBuilder) Revoke(ctx context.Context, grantToRevoke *v2.Grant) (annotations.Annotations, error) {
 	l := ctxzap.Extract(ctx)
 
-	principal := grant.Principal
+	principal := grantToRevoke.Principal
+	entitlement := grantToRevoke.Entitlement
 
 	if principal.Id.ResourceType != userResourceType.Id {
 		l.Warn(
@@ -203,7 +205,20 @@ func (g *groupBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotations
 		return nil, fmt.Errorf("galileo-ft-connector: only users can have group membership revoked")
 	}
 
-	err := g.client.RemoveAccountFromGroup(ctx, principal.Id.Resource)
+	// RemoveAccountFromGroup can't be scoped to a specific group — it removes the account from
+	// whatever group it currently belongs to. Check membership in the entitlement's group first so
+	// a revoke against a stale grant (the account has since moved to a different group) doesn't
+	// strip the account's current, unrelated group membership.
+	groupToAccounts, err := g.client.ListGroupMembers(ctx, entitlement.Resource.Id.Resource)
+	if err != nil {
+		return nil, fmt.Errorf("galileo-ft-connector: failed to list group members: %w", err)
+	}
+
+	if !slices.Contains(groupToAccounts.AccountIDs, principal.Id.Resource) {
+		return annotations.New(&v2.GrantAlreadyRevoked{}), nil
+	}
+
+	err = g.client.RemoveAccountFromGroup(ctx, principal.Id.Resource)
 	if err != nil {
 		return nil, fmt.Errorf("galileo-ft-connector: failed to revoke group membership: %w", err)
 	}

@@ -78,6 +78,10 @@ type State struct {
 	// still works. A single value per account is sufficient: real Galileo-FT accounts belong to
 	// only one group at a time (https://docs.galileo-ft.com/pro/docs/creating-a-corporate-hierarchy).
 	grantedMemberships map[string]string // accID → groupID
+
+	// preGrantGroup records the group AddAccountToGroup moved accID out of (if any), so
+	// RemoveAccountFromGroup can restore it and the account stays discoverable afterward.
+	preGrantGroup map[string]string // accID → groupID
 }
 
 func NewState() *State {
@@ -89,6 +93,7 @@ func NewState() *State {
 		groupMembers:       make(map[string][]string),
 		accountRelated:     make(map[string][]string),
 		grantedMemberships: make(map[string]string),
+		preGrantGroup:      make(map[string]string),
 	}
 	seed(s)
 	return s
@@ -194,14 +199,26 @@ func (s *State) AddAccountToGroup(groupID, accID string) (bool, bool, bool) {
 	if slices.Contains(s.groupMembers[groupID], accID) {
 		return true, true, true
 	}
+	// An account belongs to only one group at a time, so moving it here means removing it from
+	// wherever it currently is (https://docs.galileo-ft.com/pro/docs/creating-a-corporate-hierarchy).
+	// The prior group is recorded so a later RemoveAccountFromGroup can restore it, leaving the
+	// account discoverable instead of orphaned from every group.
+	for otherGroupID, members := range s.groupMembers {
+		if slices.Contains(members, accID) {
+			s.preGrantGroup[accID] = otherGroupID
+			s.groupMembers[otherGroupID] = slices.DeleteFunc(members, func(id string) bool { return id == accID })
+			break
+		}
+	}
 	s.groupMembers[groupID] = append(s.groupMembers[groupID], accID)
 	s.grantedMemberships[accID] = groupID
 	return false, true, true
 }
 
 // RemoveAccountFromGroup removes the most recently granted membership for accID (from grantedMemberships),
-// leaving any seed-time membership intact. This ensures the account remains discoverable in subsequent
-// sync cycles, so the sync-test@v4 two-cycle idempotency check can succeed.
+// restoring whatever group AddAccountToGroup moved it out of (if any). This ensures the account
+// remains discoverable in subsequent sync cycles, so the sync-test@v4 two-cycle idempotency check
+// can succeed, while still enforcing that an account belongs to only one group at a time.
 // Returns notMember=true if no granted membership exists for the account.
 func (s *State) RemoveAccountFromGroup(accID string) (bool, bool) {
 	s.mu.Lock()
@@ -215,5 +232,9 @@ func (s *State) RemoveAccountFromGroup(accID string) (bool, bool) {
 	}
 	s.groupMembers[groupID] = slices.DeleteFunc(s.groupMembers[groupID], func(id string) bool { return id == accID })
 	delete(s.grantedMemberships, accID)
+	if prevGroupID, ok := s.preGrantGroup[accID]; ok {
+		s.groupMembers[prevGroupID] = append(s.groupMembers[prevGroupID], accID)
+		delete(s.preGrantGroup, accID)
+	}
 	return false, true
 }
