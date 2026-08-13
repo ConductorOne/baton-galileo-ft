@@ -49,11 +49,14 @@ func writeGalileoError(w http.ResponseWriter, httpStatus, code int, status strin
 	})
 }
 
-// writeSuccess writes {"response_data": data}.
-// Mirror of galileo.BaseResponse.
+// writeSuccess writes {"status_code": 0, "status": "Success", "response_data": data}, matching
+// the envelope Galileo-FT includes on every response.
+// Mirror of galileo.BaseResponse / galileo.StatusEnvelope.
 func writeSuccess(w http.ResponseWriter, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{
+		"status_code":   0,
+		"status":        "Success",
 		"response_data": data,
 	})
 }
@@ -63,6 +66,8 @@ func writeSuccess(w http.ResponseWriter, data any) {
 func writeListSuccess(w http.ResponseWriter, data any, page, numPages int) {
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{
+		"status_code":     0,
+		"status":          "Success",
 		"response_data":   data,
 		"page":            page,
 		"number_of_pages": numPages,

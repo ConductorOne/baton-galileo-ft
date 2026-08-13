@@ -2,7 +2,6 @@ package galileo
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -70,10 +69,13 @@ func (c *Client) Ping(ctx context.Context) error {
 		ProviderID:  c.config.ProviderID,
 	}
 
-	var res BaseResponse[json.RawMessage]
+	var res StatusEnvelope
 	err := c.post(ctx, PingEndpoint, prepareForm(data), &res)
 	if err != nil {
 		return err
+	}
+	if res.StatusCode.String() != "0" {
+		return fmt.Errorf("ping failed: %s (%s)", res.Status, res.StatusCode)
 	}
 
 	return nil
@@ -234,10 +236,13 @@ func (c *Client) AddAccountToGroup(ctx context.Context, groupID, accountID strin
 		AccountIDs:  []string{accountID},
 	}
 
-	var res BaseResponse[json.RawMessage]
+	var res StatusEnvelope
 	err := c.post(ctx, AddAccountToGroupEndpoint, prepareForm(data), &res)
 	if err != nil {
 		return err
+	}
+	if res.StatusCode.String() != "0" {
+		return fmt.Errorf("failed to add account to group: %s (%s)", res.Status, res.StatusCode)
 	}
 
 	return nil
@@ -256,10 +261,13 @@ func (c *Client) RemoveAccountFromGroup(ctx context.Context, accountID string) e
 		AccountIDs:  []string{accountID},
 	}
 
-	var res BaseResponse[json.RawMessage]
+	var res StatusEnvelope
 	err := c.post(ctx, RemoveAccountFromGroupEndpoint, prepareForm(data), &res)
 	if err != nil {
 		return err
+	}
+	if res.StatusCode.String() != "0" {
+		return fmt.Errorf("failed to remove account from group: %s (%s)", res.Status, res.StatusCode)
 	}
 
 	return nil

@@ -1,7 +1,19 @@
 package galileo
 
+import "encoding/json"
+
 type BaseResponse[T any] struct {
 	Data T `json:"response_data"`
+}
+
+// StatusEnvelope captures the status_code/status fields Galileo-FT includes on every response
+// (https://docs.galileo-ft.com/pro/reference/api-reference-global-response-statuses). Used for
+// calls whose response_data carries no useful payload, so a non-zero status_code on an HTTP 2xx
+// is still caught rather than silently treated as success.
+type StatusEnvelope struct {
+	StatusCode json.Number     `json:"status_code"`
+	Status     string          `json:"status"`
+	Data       json.RawMessage `json:"response_data"`
 }
 
 type ListResponse[T any] struct {
