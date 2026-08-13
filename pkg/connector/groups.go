@@ -192,7 +192,6 @@ func (g *groupBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotations
 	l := ctxzap.Extract(ctx)
 
 	principal := grant.Principal
-	entitlement := grant.Entitlement
 
 	if principal.Id.ResourceType != userResourceType.Id {
 		l.Warn(
@@ -204,7 +203,7 @@ func (g *groupBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotations
 		return nil, fmt.Errorf("galileo-ft-connector: only users can have group membership revoked")
 	}
 
-	err := g.client.RemoveAccountFromGroup(ctx, entitlement.Resource.Id.Resource, principal.Id.Resource)
+	err := g.client.RemoveAccountFromGroup(ctx, principal.Id.Resource)
 	if err != nil {
 		return nil, fmt.Errorf("galileo-ft-connector: failed to revoke group membership: %w", err)
 	}

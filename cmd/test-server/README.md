@@ -31,16 +31,16 @@ Galileo-FT embeds credentials in every POST form body — there is no token endp
 53 root groups (forces 2-page pagination since the connector requests 50 per page):
 
 - `group-01` — 2 child groups (`group-01-child-a`, `group-01-child-b`); members: `acc-prn-001`, `acc-prn-002`
-- `group-02` — 1 child group (`group-02-child-a`); members: `acc-prn-002`, `acc-prn-003` (overlapping with group-01)
+- `group-02` — 1 child group (`group-02-child-a`); member: `acc-prn-003`
 - `group-03` — no children; member: `acc-prn-005`
 - `group-04` through `group-53` — no children, no members
 
-5 primary accounts:
+5 primary accounts (an account belongs to only one group at a time, per Galileo's corporate hierarchy docs):
 
 | Account (prn) | Name | Group |
 |---|---|---|
 | `acc-prn-001` | Alice Adams | group-01 |
-| `acc-prn-002` | Bob Baker | group-01, group-02 (overlapping) |
+| `acc-prn-002` | Bob Baker | group-01 |
 | `acc-prn-003` | Carol Clark | group-02 |
 | `acc-prn-004` | Dave Davis | (none — tests empty-grants path) |
 | `acc-prn-005` | Eve Evans | group-03 |
@@ -80,7 +80,7 @@ curl -s -X POST http://localhost:8765/intserv/4.0/getAccountGroupRelationships \
 curl -s -X POST http://localhost:8765/intserv/4.0/setAccountGroupRelationships \
   -d 'apiLogin=test-login&apiTransKey=test-trans-key&providerId=test-provider-id&transactionId=abc&groupId=group-03&accountNos=acc-prn-004'
 
-# Remove account from group (Revoke)
+# Remove account from group (Revoke) — no groupId; the account is removed from whatever group it's in
 curl -s -X POST http://localhost:8765/intserv/4.0/removeAccountGroupRelationship \
-  -d 'apiLogin=test-login&apiTransKey=test-trans-key&providerId=test-provider-id&transactionId=abc&groupId=group-03&accountNos=acc-prn-004'
+  -d 'apiLogin=test-login&apiTransKey=test-trans-key&providerId=test-provider-id&transactionId=abc&accountNos=acc-prn-004'
 ```

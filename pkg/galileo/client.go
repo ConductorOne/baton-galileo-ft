@@ -2,6 +2,7 @@ package galileo
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -69,7 +70,8 @@ func (c *Client) Ping(ctx context.Context) error {
 		ProviderID:  c.config.ProviderID,
 	}
 
-	err := c.post(ctx, PingEndpoint, prepareForm(data), nil)
+	var res BaseResponse[json.RawMessage]
+	err := c.post(ctx, PingEndpoint, prepareForm(data), &res)
 	if err != nil {
 		return err
 	}
@@ -215,6 +217,10 @@ func (c *Client) ListGroupMembers(ctx context.Context, groupID string) (*GroupTo
 		return nil, fmt.Errorf("unexpected number of group to accounts responses: %d", len(res.Data))
 	}
 
+	if len(res.Data) == 0 {
+		return &GroupToAccounts{GroupID: groupID}, nil
+	}
+
 	return &res.Data[0], nil
 }
 
@@ -228,7 +234,8 @@ func (c *Client) AddAccountToGroup(ctx context.Context, groupID, accountID strin
 		AccountIDs:  []string{accountID},
 	}
 
-	err := c.post(ctx, AddAccountToGroupEndpoint, prepareForm(data), nil)
+	var res BaseResponse[json.RawMessage]
+	err := c.post(ctx, AddAccountToGroupEndpoint, prepareForm(data), &res)
 	if err != nil {
 		return err
 	}
@@ -237,16 +244,20 @@ func (c *Client) AddAccountToGroup(ctx context.Context, groupID, accountID strin
 }
 
 // https://docs.galileo-ft.com/pro/reference/post_removeaccountgrouprelationship
-func (c *Client) RemoveAccountFromGroup(ctx context.Context, groupID, accountID string) error {
+// Note: this endpoint has no groupId parameter (confirmed against the Galileo-FT API
+// reference) — it only accepts accountNos, so the account is removed from whatever
+// group it currently belongs to. This is safe because an account belongs to only one
+// group at a time: https://docs.galileo-ft.com/pro/docs/creating-a-corporate-hierarchy
+func (c *Client) RemoveAccountFromGroup(ctx context.Context, accountID string) error {
 	data := &FormData{
 		APILogin:    c.config.APILogin,
 		APITransKey: c.config.APITransKey,
 		ProviderID:  c.config.ProviderID,
-		GroupID:     groupID,
 		AccountIDs:  []string{accountID},
 	}
 
-	err := c.post(ctx, RemoveAccountFromGroupEndpoint, prepareForm(data), nil)
+	var res BaseResponse[json.RawMessage]
+	err := c.post(ctx, RemoveAccountFromGroupEndpoint, prepareForm(data), &res)
 	if err != nil {
 		return err
 	}

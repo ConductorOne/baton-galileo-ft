@@ -96,12 +96,13 @@ func seed(s *State) {
 	}
 	s.accountRelated["acc-prn-001"] = []string{"acc-prn-001-child"}
 
-	// Group memberships:
+	// Group memberships (an account belongs to only one group at a time, per
+	// https://docs.galileo-ft.com/pro/docs/creating-a-corporate-hierarchy):
 	//   acc-prn-001, acc-prn-002 → group-01
-	//   acc-prn-002, acc-prn-003 → group-02  (acc-prn-002 in two groups, tests overlapping membership)
+	//   acc-prn-003             → group-02
 	//   acc-prn-005             → group-03
 	//   acc-prn-004             → (none, tests empty-grants path)
 	s.groupMembers["group-01"] = []string{"acc-prn-001", "acc-prn-002"}
-	s.groupMembers["group-02"] = []string{"acc-prn-002", "acc-prn-003"}
+	s.groupMembers["group-02"] = []string{"acc-prn-003"}
 	s.groupMembers["group-03"] = []string{"acc-prn-005"}
 }

@@ -49,14 +49,6 @@ func writeGalileoError(w http.ResponseWriter, httpStatus, code int, status strin
 	})
 }
 
-// writeEmpty writes HTTP 200 with Content-Type: application/json and no body.
-// Used for write endpoints (add/remove) where the connector passes nil as the
-// response target and uhttp.WithJSONResponse(nil) only accepts empty bodies.
-func writeEmpty(w http.ResponseWriter) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-}
-
 // writeSuccess writes {"response_data": data}.
 // Mirror of galileo.BaseResponse.
 func writeSuccess(w http.ResponseWriter, data any) {
@@ -78,17 +70,13 @@ func writeListSuccess(w http.ResponseWriter, data any, page, numPages int) {
 }
 
 // handlePing validates credentials and returns success.
-// The connector calls Ping with a nil response target (uhttp.WithJSONResponse(nil)).
-// uhttp only returns nil for nil targets when the body is also empty, so we write
-// an empty body here. Any non-empty body causes an InvalidUnmarshalError.
 // Doc URL: https://docs.galileo-ft.com/pro/reference/ping
 func (s *Server) handlePing(w http.ResponseWriter, r *http.Request) {
 	ok, _ := s.parseAndValidate(w, r)
 	if !ok {
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
+	writeSuccess(w, struct{}{})
 }
 
 // handleGetRootGroups returns a page of root groups.
@@ -158,7 +146,8 @@ func (s *Server) handleGetGroupsInfo(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleGetAccountGroupRelationships returns the accounts that belong to a group.
-// Always returns a 1-element array even for empty groups — the connector indexes [0] directly.
+// Returns a genuinely empty array for member-less groups, matching the real API, so CI exercises
+// the client's zero-element guard rather than a mock shape that can't occur in production.
 // Doc URL: https://docs.galileo-ft.com/pro/reference/getaccountgrouprelationships
 func (s *Server) handleGetAccountGroupRelationships(w http.ResponseWriter, r *http.Request) {
 	ok, r := s.parseAndValidate(w, r)
@@ -173,11 +162,11 @@ func (s *Server) handleGetAccountGroupRelationships(w http.ResponseWriter, r *ht
 	}
 
 	members := s.state.GetGroupMembers(groupID)
-	if members == nil {
-		members = []string{}
+	if len(members) == 0 {
+		writeSuccess(w, []map[string]any{})
+		return
 	}
 
-	// Response must be a 1-element array — the connector calls res.Data[0] unconditionally.
 	writeSuccess(w, []map[string]any{
 		{
 			"group_id":   groupID,
@@ -255,6 +244,7 @@ func (s *Server) handleSetAccountGroupRelationships(w http.ResponseWriter, r *ht
 		return
 	}
 
+	linked := make([]map[string]any, 0, len(accountNos))
 	for _, accID := range accountNos {
 		alreadyMember, groupExists, accountExists := s.state.AddAccountToGroup(groupID, accID)
 		if !groupExists {
@@ -266,27 +256,22 @@ func (s *Server) handleSetAccountGroupRelationships(w http.ResponseWriter, r *ht
 			return
 		}
 		if alreadyMember {
-			writeEmpty(w)
-			return
+			continue
 		}
+		linked = append(linked, map[string]any{"group_id": groupID, "pmt_ref_no": accID})
 	}
 
-	writeEmpty(w)
+	writeSuccess(w, linked)
 }
 
-// handleRemoveAccountGroupRelationship removes accounts from the given group (provisioning Revoke).
-// Accounts can belong to more than one group at a time (see seed data for acc-prn-002), so the
-// removal is scoped to groupId, not to whatever group the account happens to be in.
+// handleRemoveAccountGroupRelationship removes an account from its current group (provisioning Revoke).
+// Note: per the Galileo-FT API reference, this endpoint takes no groupId — only accountNos — so the
+// account is removed from whatever group it currently belongs to. This is safe because an account
+// belongs to only one group at a time: https://docs.galileo-ft.com/pro/docs/creating-a-corporate-hierarchy
 // Doc URL: https://docs.galileo-ft.com/pro/reference/removeaccountgrouprelationship
 func (s *Server) handleRemoveAccountGroupRelationship(w http.ResponseWriter, r *http.Request) {
 	ok, r := s.parseAndValidate(w, r)
 	if !ok {
-		return
-	}
-
-	groupID := r.PostForm.Get("groupId")
-	if groupID == "" {
-		writeGalileoError(w, http.StatusBadRequest, 400, "groupId is required")
 		return
 	}
 
@@ -297,18 +282,17 @@ func (s *Server) handleRemoveAccountGroupRelationship(w http.ResponseWriter, r *
 	}
 
 	for _, accID := range accountNos {
-		notMember, accountExists := s.state.RemoveAccountFromGroup(groupID, accID)
+		notMember, accountExists := s.state.RemoveAccountFromGroup(accID)
 		if !accountExists {
 			writeGalileoError(w, http.StatusNotFound, 404, "account not found: "+accID)
 			return
 		}
 		if notMember {
-			writeEmpty(w)
-			return
+			continue
 		}
 	}
 
-	writeEmpty(w)
+	writeSuccess(w, struct{}{})
 }
 
 func atoiOr(s string, def int) int {
