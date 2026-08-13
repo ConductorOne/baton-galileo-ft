@@ -282,13 +282,10 @@ func (s *Server) handleRemoveAccountGroupRelationship(w http.ResponseWriter, r *
 	}
 
 	for _, accID := range accountNos {
-		notMember, accountExists := s.state.RemoveAccountFromGroup(accID)
+		_, accountExists := s.state.RemoveAccountFromGroup(accID)
 		if !accountExists {
 			writeGalileoError(w, http.StatusNotFound, 404, "account not found: "+accID)
 			return
-		}
-		if notMember {
-			continue
 		}
 	}
 
