@@ -197,18 +197,18 @@ func (s *State) AddAccountToGroup(groupID, accID string) (bool, bool, bool) {
 	return false, true, true
 }
 
-// RemoveAccountFromGroup removes the most recently granted membership for accID (from grantedMemberships),
-// leaving any seed-time membership intact. This ensures the account remains discoverable in subsequent
-// sync cycles, so the sync-test@v4 two-cycle idempotency check can succeed.
-// Returns notMember=true if no granted membership exists for the account.
-func (s *State) RemoveAccountFromGroup(accID string) (bool, bool) {
+// RemoveAccountFromGroup removes accID from groupID if that's the membership most recently granted
+// via AddAccountToGroup (from grantedMemberships), leaving any seed-time membership — including in
+// other groups the account also belongs to — intact. This ensures the account remains discoverable
+// in subsequent sync cycles, so the sync-test@v4 two-cycle idempotency check can succeed.
+// Returns notMember=true if the account has no granted membership in groupID.
+func (s *State) RemoveAccountFromGroup(groupID, accID string) (bool, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if _, ok := s.accounts[accID]; !ok {
 		return false, false
 	}
-	groupID, ok := s.grantedMemberships[accID]
-	if !ok {
+	if s.grantedMemberships[accID] != groupID {
 		return true, true
 	}
 	s.groupMembers[groupID] = slices.DeleteFunc(s.groupMembers[groupID], func(id string) bool { return id == accID })

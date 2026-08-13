@@ -31,9 +31,11 @@ jobs:
         run: |
           for i in $(seq 1 30); do
             curl -sf -X POST http://localhost:8765/intserv/4.0/ping \
-              -d 'apiLogin=test-login&apiTransKey=test-trans-key&providerId=test-provider-id' && break
+              -d 'apiLogin=test-login&apiTransKey=test-trans-key&providerId=test-provider-id' && exit 0
             sleep 1
           done
+          echo "test server did not start" >&2
+          exit 1
       - name: Run baton-galileo-ft
         run: ./baton-galileo-ft
       - name: Grant/revoke

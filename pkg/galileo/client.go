@@ -242,6 +242,7 @@ func (c *Client) RemoveAccountFromGroup(ctx context.Context, groupID, accountID 
 		APILogin:    c.config.APILogin,
 		APITransKey: c.config.APITransKey,
 		ProviderID:  c.config.ProviderID,
+		GroupID:     groupID,
 		AccountIDs:  []string{accountID},
 	}
 

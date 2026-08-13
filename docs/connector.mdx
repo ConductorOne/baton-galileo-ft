@@ -27,6 +27,8 @@ Configuring the connector requires you to pass in credentials generated in Galil
 
    See the [Galileo docs on authenticating to the API](https://docs.galileo-ft.com/pro/reference/api-reference-authentication) for additional details.
 
+- Your Galileo FT hostname for your production environment. If left blank, the connector defaults to Galileo's sandbox API host, so most customers should provide this.
+
 **That's it!** Next, move on to the connector configuration instructions. 
 
 ## Configure the Galileo FT connector
@@ -74,6 +76,9 @@ Paste your Galileo-provided provider ID into the **Organization ID** field.
 </Step>
 <Step>
 Enter the API Login and API Transaction Key in the **Username** and **Password** fields.
+</Step>
+<Step>
+Enter your Galileo FT hostname in the **Hostname** field. If left blank, the connector defaults to Galileo's sandbox API host.
 </Step>
 <Step>
 Click **Save**.
@@ -153,6 +158,8 @@ stringData:
   BATON_API_LOGIN: <API Login provided by Galileo FT>
   BATON_API_TRANS_KEY: <API Transaction Key provided by Galileo FT>
   BATON_PROVIDER_ID: <Provider ID provided by Galileo FT>
+  # Optional: defaults to Galileo's sandbox API host if omitted
+  BATON_HOSTNAME: <Your Galileo FT hostname>
 
   # Optional: include if you want C1 to provision access using this connector
   BATON_PROVISIONING: true

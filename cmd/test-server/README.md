@@ -82,5 +82,5 @@ curl -s -X POST http://localhost:8765/intserv/4.0/setAccountGroupRelationships \
 
 # Remove account from group (Revoke)
 curl -s -X POST http://localhost:8765/intserv/4.0/removeAccountGroupRelationship \
-  -d 'apiLogin=test-login&apiTransKey=test-trans-key&providerId=test-provider-id&transactionId=abc&accountNos=acc-prn-004'
+  -d 'apiLogin=test-login&apiTransKey=test-trans-key&providerId=test-provider-id&transactionId=abc&groupId=group-03&accountNos=acc-prn-004'
 ```

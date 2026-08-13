@@ -274,13 +274,19 @@ func (s *Server) handleSetAccountGroupRelationships(w http.ResponseWriter, r *ht
 	writeEmpty(w)
 }
 
-// handleRemoveAccountGroupRelationship removes an account from its current group (provisioning Revoke).
-// Note: the connector does NOT send groupId — it only sends accountNos; the account is removed from
-// whatever group it currently belongs to (Galileo accounts can only be in one group at a time).
+// handleRemoveAccountGroupRelationship removes accounts from the given group (provisioning Revoke).
+// Accounts can belong to more than one group at a time (see seed data for acc-prn-002), so the
+// removal is scoped to groupId, not to whatever group the account happens to be in.
 // Doc URL: https://docs.galileo-ft.com/pro/reference/removeaccountgrouprelationship
 func (s *Server) handleRemoveAccountGroupRelationship(w http.ResponseWriter, r *http.Request) {
 	ok, r := s.parseAndValidate(w, r)
 	if !ok {
+		return
+	}
+
+	groupID := r.PostForm.Get("groupId")
+	if groupID == "" {
+		writeGalileoError(w, http.StatusBadRequest, 400, "groupId is required")
 		return
 	}
 
@@ -291,7 +297,7 @@ func (s *Server) handleRemoveAccountGroupRelationship(w http.ResponseWriter, r *
 	}
 
 	for _, accID := range accountNos {
-		notMember, accountExists := s.state.RemoveAccountFromGroup(accID)
+		notMember, accountExists := s.state.RemoveAccountFromGroup(groupID, accID)
 		if !accountExists {
 			writeGalileoError(w, http.StatusNotFound, 404, "account not found: "+accID)
 			return
