@@ -127,10 +127,6 @@ func (g *groupBuilder) List(ctx context.Context, _ *v2.ResourceId, opts rs.SyncO
 		return nil, nil, fmt.Errorf("galileo-ft-connector: failed to prepare next page token: %w", err)
 	}
 
-	if nextPage == "" {
-		return rv, nil, nil
-	}
-
 	return rv, &rs.SyncOpResults{NextPageToken: nextPage}, nil
 }
 
