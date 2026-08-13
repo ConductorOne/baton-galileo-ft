@@ -1,53 +1,13 @@
 package galileo
 
-import (
-	"encoding/json"
-	"fmt"
-)
-
-// BaseResponse mirrors Galileo-FT's response envelope: every response — success or failure —
-// carries status_code/status (https://docs.galileo-ft.com/pro/reference/api-reference-global-response-statuses),
-// so a real tenant can answer HTTP 200 with a non-zero status_code. checkStatus lets post() catch
-// that uniformly instead of relying solely on the HTTP status.
 type BaseResponse[T any] struct {
-	StatusCode json.Number `json:"status_code"`
-	Status     string      `json:"status"`
-	Data       T           `json:"response_data"`
-}
-
-func (r BaseResponse[T]) checkStatus() error {
-	return checkGalileoStatus(r.StatusCode, r.Status)
+	Data T `json:"response_data"`
 }
 
 type ListResponse[T any] struct {
-	StatusCode json.Number `json:"status_code"`
-	Status     string      `json:"status"`
-	Data       []T         `json:"response_data"`
-	Page       uint        `json:"page"`
-	NumOfPages uint        `json:"number_of_pages"`
-}
-
-func (r ListResponse[T]) checkStatus() error {
-	return checkGalileoStatus(r.StatusCode, r.Status)
-}
-
-// statusChecker is implemented by every response envelope type so post() can validate status_code
-// generically, regardless of the concrete response_data shape the caller decoded into.
-type statusChecker interface {
-	checkStatus() error
-}
-
-// checkGalileoStatus treats a missing status_code as success (some mocks/older responses may omit
-// it) and otherwise requires it to parse as the numeric zero value.
-func checkGalileoStatus(code json.Number, status string) error {
-	if code == "" {
-		return nil
-	}
-	n, err := code.Int64()
-	if err != nil || n != 0 {
-		return fmt.Errorf("galileo-ft: request failed: %s (%s)", status, code)
-	}
-	return nil
+	Data       []T  `json:"response_data"`
+	Page       uint `json:"page"`
+	NumOfPages uint `json:"number_of_pages"`
 }
 
 type RelatedAccountsResponse struct {

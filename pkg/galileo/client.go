@@ -297,12 +297,6 @@ func (c *Client) post(ctx context.Context, path string, form *url.Values, respon
 
 	defer resp.Body.Close()
 
-	if checker, ok := response.(statusChecker); ok {
-		if err := checker.checkStatus(); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
