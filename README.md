@@ -22,7 +22,7 @@ baton resources
 
 ## docker
 ```
-docker run --rm -v $(pwd):/out -e BATON_API_LOGIN=api_login -e BATON_API_TRANS_KEY=api_trans_key -e BATON_PROVIDER_ID=provider_id ghcr.io/conductorone/baton-galileo-ft:latest -f "/out/sync.c1z"
+docker run --rm -v $(pwd):/out -e BATON_API_LOGIN=api_login -e BATON_API_TRANS_KEY=api_trans_key -e BATON_PROVIDER_ID=provider_id public.ecr.aws/conductorone/baton-galileo-ft:latest -f "/out/sync.c1z"
 docker run --rm -v $(pwd):/out ghcr.io/conductorone/baton:latest -f "/out/sync.c1z" resources
 ```
 
